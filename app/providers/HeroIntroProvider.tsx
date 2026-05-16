@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
 
 type HeroIntroContextValue = {
@@ -20,6 +21,8 @@ type HeroIntroContextValue = {
 const HeroIntroContext = createContext<HeroIntroContextValue | null>(null);
 
 export function HeroIntroProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const isHomeRoute = pathname === '/';
   const { pages } = useWebBuilder();
 
   const introExpected = useMemo(
@@ -27,11 +30,11 @@ export function HeroIntroProvider({ children }: { children: ReactNode }) {
     [pages]
   );
 
-  const [introActive, setIntroActive] = useState(introExpected);
+  const [introActive, setIntroActive] = useState(false);
 
   useEffect(() => {
-    setIntroActive(introExpected);
-  }, [introExpected]);
+    setIntroActive(introExpected && isHomeRoute);
+  }, [introExpected, isHomeRoute]);
 
   const beginHeroIntro = useCallback(() => {
     setIntroActive(true);
@@ -41,13 +44,22 @@ export function HeroIntroProvider({ children }: { children: ReactNode }) {
     setIntroActive(false);
   }, []);
 
+  const isHeroIntroPending = introExpected && introActive && isHomeRoute;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('hero-intro-active', isHeroIntroPending);
+    return () => {
+      document.documentElement.classList.remove('hero-intro-active');
+    };
+  }, [isHeroIntroPending]);
+
   const value = useMemo(
     () => ({
-      isHeroIntroPending: introExpected && introActive,
+      isHeroIntroPending,
       beginHeroIntro,
       completeHeroIntro,
     }),
-    [introExpected, introActive, beginHeroIntro, completeHeroIntro]
+    [isHeroIntroPending, beginHeroIntro, completeHeroIntro]
   );
 
   return (
