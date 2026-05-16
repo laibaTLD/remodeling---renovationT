@@ -19,8 +19,8 @@ import { CTA5Section } from '@/app/components/sections/CTA5Section';
 import { ContactSection } from './components/sections/ContactSection';
 import { GallerySection } from '@/app/components/sections/GallerySection';
 import { BlogSection } from '@/app/components/sections/BlogSection';
+import { ServingAreasSection } from '@/app/components/sections/ServingAreasSection';
 import { getThemeColors } from '@/app/lib/themeBuilder';
-
 export default function HomeClient() {
   const { site, pages, loading, error } = useWebBuilder();
 
@@ -128,13 +128,14 @@ export default function HomeClient() {
       <Header />
 
       <main>
-        <HeroSection hero={displayPage.hero} projectsSection={displayPage.projectsSection} />
+        <HeroSection
+          hero={displayPage.hero}
+          projectsSection={displayPage.projectsSection}
+        />
 
         <AboutSection aboutSection={displayPage.aboutSection} />
         <ServicesSection servicesSection={displayPage.servicesSection} />
         <GallerySection gallerySection={displayPage.gallerySection} />
-        <TestimonialsSection testimonialsSection={displayPage.testimonialsSection} />
-        <FAQSection faqSection={displayPage.faqSection} />
         <BlogSection blogSection={displayPage.blogSection} />
         <CTASection ctaSection={displayPage.ctaSection} />
         <WhyChooseUsSection whyChooseUsSection={displayPage.whyChooseUsSection} />
@@ -143,6 +144,9 @@ export default function HomeClient() {
         <CTA2Section cta2Section={displayPage.cta2Section} />
         <CTA3Section cta3Section={displayPage.cta3Section} />
         <CTA5Section cta5Section={displayPage.cta5Section} />
+        <TestimonialsSection testimonialsSection={displayPage.testimonialsSection} />
+        <FAQSection faqSection={displayPage.faqSection} />
+        <ServingAreasSection servingAreasSection={displayPage.servingAreasSection} />
         <ContactSection contactSection={displayPage.contactSection} />
       </main>
       

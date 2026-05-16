@@ -17,7 +17,7 @@ export default function BlogPage() {
       <main className="flex-1">
         {!loading && blogPage && (
           <>
-            <HeroSection hero={blogPage.hero} />
+            <HeroSection hero={blogPage.hero} projectsSection={blogPage.projectsSection} />
             <BlogSection blogSection={blogPage.blogSection} />
           </>
         )}

@@ -84,18 +84,15 @@ export const ServiceDetail: React.FC<ServiceDetailProps> = ({
                 </div>
             </main>
 
-            {/* Dynamic CTA Section - Injected with Database colors */}
-            <div className="border-t border-b" style={{ borderColor: `${themeColors.inactive}10` }}>
+            {isCtaEnabled && (
                 <CTASection ctaSection={ctaSectionFromService} />
-            </div>
+            )}
 
             {/* Support Information Sections */}
             <div className="space-y-0">
                 <ServiceFAQSection service={service} />
                 
-                <div style={{ backgroundColor: themeColors.sectionBackgroundLight }}>
-                    <ServiceServingAreasSection service={service} />
-                </div>
+                <ServiceServingAreasSection service={service} />
 
                 <ServiceContactFormSection service={service} />
             </div>

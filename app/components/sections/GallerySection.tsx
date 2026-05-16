@@ -40,13 +40,9 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallerySection, 
 
     return (
         <section
-            className={cn('relative overflow-hidden py-20 text-white lg:py-32', className)}
-            style={{
-                background: 'linear-gradient(180deg, #050508 0%, #0a0a12 50%, #050508 100%)',
-            }}
+            className={cn('wb-surface-light wb-hairline-t-light relative overflow-hidden py-20 wb-text-on-light lg:py-32', className)}
         >
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[length:56px_56px] opacity-40" />
-            <div className="container relative mx-auto px-6 md:px-12 lg:px-20">
+            <div className="relative z-[1] container mx-auto px-6 md:px-12 lg:px-20">
                 <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-12 lg:gap-14">
                     <motion.div
                         className="flex flex-col gap-12 md:col-span-7 lg:gap-20"
@@ -55,7 +51,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallerySection, 
                         viewport={{ once: true, amount: 0.2 }}
                         transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
                     >
-                        <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_32px_100px_rgba(0,0,0,0.5)]">
+                        <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border wb-border-on-light wb-glass-on-light-strong shadow-[0_32px_100px_color-mix(in_srgb,var(--wb-text-main)_8%,transparent)]">
                             <OptimizedImage
                                 src={getImageSrc(mainImg.imageUrl)}
                                 alt={mainImg.altText || ''}
@@ -63,15 +59,14 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallerySection, 
                                 sizes="(max-width: 768px) 100vw, 58vw"
                                 className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-105"
                             />
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[color:color-mix(in_srgb,var(--wb-text-main)_35%,transparent)] via-transparent to-transparent" />
                         </div>
 
                         <div className="max-w-2xl space-y-4">
                             <div 
-                                className="text-balance text-2xl font-light uppercase leading-[1.3] tracking-[0.14em] md:text-3xl lg:text-4xl xl:text-5xl"
+                                className="wb-text-on-light text-balance text-2xl font-light uppercase leading-[1.3] tracking-[0.14em] opacity-95 md:text-3xl lg:text-4xl xl:text-5xl"
                                 style={{ 
                                     fontFamily: themeFonts.heading,
-                                    color: 'rgba(255,255,255,0.92)'
                                 }}
                             >
                                 <TiptapRenderer content={gallerySection.title} />
@@ -95,7 +90,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallerySection, 
                         viewport={{ once: true, amount: 0.2 }}
                         transition={{ duration: 0.75, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
                     >
-                        <div className="group relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-2xl">
+                        <div className="group relative aspect-video overflow-hidden rounded-2xl border wb-border-on-light wb-glass-on-light-strong shadow-lg">
                            <OptimizedImage
                                 src={getImageSrc(topSecondaryImg.imageUrl)}
                                 alt={topSecondaryImg.altText || ''}
@@ -105,7 +100,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallerySection, 
                             />
                         </div>
 
-                        <div className="group relative z-10 aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-xl md:aspect-[3/4]">
+                        <div className="group relative z-10 aspect-[4/5] overflow-hidden rounded-2xl border wb-border-on-light wb-glass-on-light-strong shadow-lg md:aspect-[3/4]">
                             <OptimizedImage
                                 src={getImageSrc(bottomSecondaryImg.imageUrl)}
                                 alt={bottomSecondaryImg.altText || ''}
@@ -127,7 +122,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallerySection, 
                                 viewport={{ once: true, amount: 0.25 }}
                                 transition={{ duration: 0.5, delay: i * 0.05 }}
                                 className={cn(
-                                    "group relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/30",
+                                    "group relative aspect-square overflow-hidden rounded-xl border wb-border-on-light bg-[color:color-mix(in_srgb,var(--wb-text-main)_6%,var(--wb-section-bg-light))]",
                                     i % 2 === 1 ? "md:translate-y-8" : ""
                                 )}
                             >

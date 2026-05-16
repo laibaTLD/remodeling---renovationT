@@ -1,122 +1,61 @@
 'use client';
 
 import React from 'react';
-import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
-import { getImageSrc, cn } from '@/app/lib/utils';
-import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
-import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
+import type { Page } from '@/app/lib/types';
+import { AboutSection } from '@/app/components/sections/AboutSection';
 
 interface AboutProps {
-  about: any;
+  about: unknown;
   className?: string;
 }
 
+type AboutSectionData = NonNullable<Page['aboutSection']>;
+
+function normalizeImage(raw: unknown): AboutSectionData['image'] | undefined {
+  if (!raw) return undefined;
+  if (typeof raw === 'string' && raw.trim()) {
+    return { url: raw.trim() };
+  }
+  if (typeof raw === 'object' && raw !== null && 'url' in raw) {
+    const record = raw as { url?: string; altText?: string };
+    if (record.url?.trim()) {
+      return { url: record.url.trim(), altText: record.altText };
+    }
+  }
+  return undefined;
+}
+
+function normalizeAboutSection(about: unknown): AboutSectionData | null {
+  if (!about || typeof about !== 'object') return null;
+
+  const data = about as Record<string, unknown>;
+  if (data.enabled === false) return null;
+
+  const features = Array.isArray(data.features)
+    ? (data.features as AboutSectionData['features']).filter((f) => f?.label?.trim())
+    : [];
+
+  const image = normalizeImage(data.image);
+  const title = data.title as AboutSectionData['title'];
+  const description = data.description as AboutSectionData['description'];
+
+  if (!title && !description && !image && features.length === 0) return null;
+
+  return {
+    enabled: true,
+    title,
+    description,
+    features,
+    image,
+  };
+}
+
+/** Service area about — same layout as site AboutSection. */
 export const About: React.FC<AboutProps> = ({ about, className }) => {
-  const themeColors = useThemeColors();
-  const themeFonts = useThemeFonts();
+  const aboutSection = normalizeAboutSection(about);
+  if (!aboutSection) return null;
 
-  if (!about || (!about.title && !about.description && !about.image)) return null;
-
-  const imageUrl = about.image 
-    ? getImageSrc(typeof about.image === 'object' ? about.image.url : about.image)
-    : null;
-
-  return (
-    <section 
-      className={cn('relative min-h-[80vh] flex items-center overflow-hidden', className)}
-      style={{ backgroundColor: themeColors.pageBackground }}
-    >
-      {/* Background Image - Cinematic Full-Width Style */}
-      <div className="absolute inset-0 z-0">
-        {imageUrl ? (
-          <OptimizedImage
-            src={imageUrl}
-            alt={about.imageAlt || 'Property Background'}
-            fill
-            sizes="100vw"
-            className="object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-neutral-200" />
-        )}
-      </div>
-
-      {/* The Signature Content Block */}
-      <div className="container mx-auto px-6 lg:px-12 relative z-10">
-        <div className="grid lg:grid-cols-12">
-          <div 
-            className="lg:col-span-5 p-10 lg:p-20 flex flex-col justify-center min-h-[500px]"
-            style={{ 
-              backgroundColor: themeColors.primaryButton,
-              color: '#FFFFFF' 
-            }}
-          >
-            <div className="space-y-8">
-              {/* Top Label/Location */}
-              {(about.label || about.location) && (
-                <div className="space-y-2">
-                  {about.label && (
-                    <h3 className="text-[11px] tracking-[0.2em] uppercase font-bold leading-tight">
-                      <TiptapRenderer content={about.label} as="inline" />
-                    </h3>
-                  )}
-                  {about.location && (
-                    <p className="text-[11px] tracking-[0.2em] uppercase opacity-80">
-                      <TiptapRenderer content={about.location} as="inline" />
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Decorative Divider */}
-              {(about.label || about.location) && (
-                <div className="w-full h-px bg-white/30" />
-              )}
-
-              {/* Main Headline */}
-              {about.title && (
-                <h2 
-                  className="text-3xl lg:text-5xl font-light leading-[1.2] uppercase tracking-wide"
-                  style={{ fontFamily: themeFonts.heading }}
-                >
-                  <TiptapRenderer content={about.title} />
-                </h2>
-              )}
-
-              {/* Description/Body */}
-              {about.description && (
-                <div 
-                  className="text-sm lg:text-base leading-relaxed opacity-90 font-light"
-                  style={{ fontFamily: themeFonts.body }}
-                >
-                  <TiptapRenderer content={about.description} />
-                </div>
-              )}
-
-              {/* Action Button */}
-              {about.ctaButton && (
-                <div className="pt-6">
-                  <a 
-                    href={about.ctaButton.href || about.ctaButton.url || '#'}
-                    className="inline-block text-[10px] tracking-[0.4em] uppercase font-bold border-b border-white/40 pb-2 transition-all hover:border-white"
-                  >
-                    <TiptapRenderer content={about.ctaButton.text} as="inline" />
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Vertical Edge Label */}
-      {about.verticalLabel && (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden lg:flex items-center rotate-90 origin-right pointer-events-none">
-          <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-white whitespace-nowrap opacity-60">
-            <TiptapRenderer content={about.verticalLabel} as="inline" />
-          </span>
-        </div>
-      )}
-    </section>
-  );
+  return <AboutSection aboutSection={aboutSection} className={className} />;
 };
+
+export default About;

@@ -1,15 +1,35 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
 import { useThemeFonts, useThemeColors } from '@/app/hooks/useTheme';
+import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
-import { ArrowUpRight, Mail, MapPin, Phone } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Facebook,
+  Globe,
+  Instagram,
+  Linkedin,
+  Mail,
+  MapPin,
+  Phone,
+  Twitter,
+  Youtube,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Page } from '@/app/lib/types';
-import { getImageSrc } from '@/app/lib/utils';
+import { getFooterNavLinks } from '@/app/lib/siteContent';
+import { getImageSrc, cn } from '@/app/lib/utils';
 import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 interface FooterProps {
   page?: Page | null;
@@ -28,31 +48,68 @@ const isNonEmptyTiptap = (value: unknown): boolean => {
   return false;
 };
 
-const isNonEmptyString = (value: unknown): value is string =>
-  typeof value === 'string' && value.trim().length > 0;
+const isNonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
 
-const buildPageHref = (p: Page): string => {
-  if (p.pageType === 'home') return '/';
-  const slug = (p.slug || '').replace(/^\/+|\/+$/g, '');
-  return slug ? `/${slug}` : '/';
-};
+const PARTICLE_LEFT = [5, 14, 22, 31, 40, 52, 61, 73, 82, 91, 8, 68, 44, 95];
 
-const PAGE_TYPE_ORDER: string[] = [
-  'home',
-  'about',
-  'service-list',
-  'blog-list',
-  'project-detail',
-  'testimonials',
-  'contact'
-];
+function platformIcon(platform: string): LucideIcon {
+  const p = platform.toLowerCase();
+  if (p === 'facebook') return Facebook;
+  if (p === 'instagram') return Instagram;
+  if (p === 'linkedin') return Linkedin;
+  if (p === 'youtube') return Youtube;
+  if (p === 'x' || p === 'twitter') return Twitter;
+  return Globe;
+}
+
+function FooterUnderlineLink({
+  href,
+  external,
+  children,
+}: {
+  href: string;
+  external?: boolean;
+  children: React.ReactNode;
+}) {
+  const inner = (
+    <span className="group/footer-link wb-text-on-dark-secondary relative inline-flex items-center gap-2 pb-0.5 text-[13px] font-light tracking-wide transition-colors duration-300 hover:text-[var(--wb-text-on-dark)] md:text-sm">
+      <span className="relative">{children}</span>
+      <span
+        className="pointer-events-none absolute bottom-0 left-0 h-px w-full origin-left scale-x-0 bg-gradient-to-r from-[color:color-mix(in_srgb,var(--wb-text-on-dark)_65%,transparent)] via-[color:color-mix(in_srgb,var(--wb-text-on-dark)_38%,transparent)] to-transparent transition-transform duration-500 ease-out group-hover/footer-link:scale-x-100"
+        aria-hidden
+      />
+      <ArrowUpRight className="relative h-3.5 w-3.5 shrink-0 opacity-0 transition-all duration-300 group-hover/footer-link:translate-x-0.5 group-hover/footer-link:opacity-100" />
+    </span>
+  );
+
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-primary)] focus-visible:ring-offset-2 focus-visible:wb-ring-offset-surface">
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-primary)] focus-visible:ring-offset-2 focus-visible:wb-ring-offset-surface">
+      {inner}
+    </Link>
+  );
+}
 
 export const Footer: React.FC<FooterProps> = ({ page }) => {
   const { site, pages, currentPage } = useWebBuilder();
   const themeFonts = useThemeFonts();
   const themeColors = useThemeColors();
   const pathname = usePathname();
+  const reducedMotion = usePrefersReducedMotion();
   const safePages = Array.isArray(pages) ? pages : [];
+
+  const footerRef = useRef<HTMLElement>(null);
+  const meshRef = useRef<HTMLDivElement>(null);
+  const orbARef = useRef<HTMLDivElement>(null);
+  const orbBRef = useRef<HTMLDivElement>(null);
+  const particlesRef = useRef<HTMLDivElement>(null);
+  const cursorGlowRef = useRef<HTMLDivElement>(null);
 
   const normalizePath = (value: unknown): string => {
     if (typeof value !== 'string') return '';
@@ -87,62 +144,27 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
     return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   };
 
-  const bgColor = themeColors.primaryButton;
-  const textColor = themeColors.textOnDark;
-  const mutedText = themeColors.textOnDarkSecondary;
-  const subtleBorder = 'rgba(255,255,255,0.12)';
-  const subtleBg = 'rgba(255,255,255,0.06)';
+  const brandColor = themeColors.primaryButton;
 
   const logoUrl = isNonEmptyString(siteFooter?.logo?.url)
     ? siteFooter.logo.url
     : isNonEmptyString(site?.theme?.logoUrl)
       ? site.theme.logoUrl
       : null;
-  const businessName = isNonEmptyString(business?.name)
-    ? business.name
-    : isNonEmptyString(site?.name)
-      ? site.name
-      : null;
+  const businessName = isNonEmptyString(business?.name) ? business.name : isNonEmptyString(site?.name) ? site.name : null;
   const businessTagline = isNonEmptyString(business?.tagline) ? business.tagline : null;
   const logoAlt = siteFooter?.logo?.altText || businessName || 'Logo';
 
-  const rawDescriptionCandidates: unknown[] = [
-    siteFooter?.description,
-    business?.description
-  ];
+  const rawDescriptionCandidates: unknown[] = [siteFooter?.description, business?.description];
   const resolvedDescription: string | object | null =
     (rawDescriptionCandidates.find((d) => isNonEmptyString(d) || isNonEmptyTiptap(d)) as string | object | undefined) ?? null;
   const isDescriptionTiptap = !!resolvedDescription && typeof resolvedDescription === 'object';
   const descriptionString = isNonEmptyString(resolvedDescription) ? resolvedDescription : null;
 
   const showSocial = Boolean(siteFooter?.showSocialLinks);
-  const socialLinks = showSocial
-    ? (site?.socialLinks || []).filter((l) => isNonEmptyString(l?.url))
-    : [];
+  const socialLinks = showSocial ? (site?.socialLinks || []).filter((l) => isNonEmptyString(l?.url)) : [];
 
-  const overrideLinks = (pageOverrides?.links || [])
-    .filter((l) => isNonEmptyString(l?.label) && isNonEmptyString(l?.href))
-    .map((l) => ({ label: l.label, href: normalizeHref(l.href) }));
-
-  const publishedPages = safePages.filter(
-    (p) => p?.status === 'published' && isNonEmptyString(p?.name)
-  );
-  const orderedPages = [
-    ...PAGE_TYPE_ORDER
-      .map((type) => publishedPages.find((p) => p.pageType === type))
-      .filter((p): p is Page => Boolean(p)),
-    ...publishedPages.filter((p) => !PAGE_TYPE_ORDER.includes(p.pageType))
-  ];
-  const seenHrefs = new Set<string>();
-  const derivedNavLinks = orderedPages
-    .map((p) => ({ label: p.name, href: buildPageHref(p) }))
-    .filter((l) => {
-      if (seenHrefs.has(l.href)) return false;
-      seenHrefs.add(l.href);
-      return true;
-    });
-
-  const navLinks = isPageOverrideActive && overrideLinks.length > 0 ? overrideLinks : derivedNavLinks;
+  const navLinks = useMemo(() => getFooterNavLinks(safePages), [safePages]);
 
   const siteColumns = !isPageOverrideActive
     ? (siteFooter?.columns || [])
@@ -150,7 +172,7 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
           title: isNonEmptyString(col?.title) ? col.title : '',
           links: (col?.links || [])
             .filter((l) => isNonEmptyString(l?.label) && isNonEmptyString(l?.url))
-            .map((l) => ({ label: l.label, url: normalizeHref(l.url) }))
+            .map((l) => ({ label: l.label, url: normalizeHref(l.url) })),
         }))
         .filter((col) => col.links.length > 0)
     : [];
@@ -161,7 +183,7 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
   const addressLine2Parts = [
     isNonEmptyString(address?.city) ? address.city : null,
     isNonEmptyString(address?.state) ? address.state : null,
-    isNonEmptyString(address?.zipCode) ? address.zipCode : null
+    isNonEmptyString(address?.zipCode) ? address.zipCode : null,
   ].filter(Boolean) as string[];
   const addressLine2 = addressLine2Parts.length
     ? `${addressLine2Parts[0]}${addressLine2Parts[1] ? `, ${addressLine2Parts[1]}` : ''}${addressLine2Parts[2] ? ` ${addressLine2Parts[2]}` : ''}`
@@ -170,9 +192,7 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
   const hasAddress = Boolean(addressLine1 || addressLine2 || addressCountry);
   const hasContact = Boolean(contactPhone || contactEmail || hasAddress);
 
-  const overrideCopyright = isPageOverrideActive && isNonEmptyString(pageOverrides?.copyright)
-    ? pageOverrides.copyright
-    : null;
+  const overrideCopyright = isPageOverrideActive && isNonEmptyString(pageOverrides?.copyright) ? pageOverrides.copyright : null;
   const siteCopyright = isNonEmptyTiptap(siteFooter?.copyright) ? siteFooter?.copyright : null;
   const hasCopyright = Boolean(overrideCopyright || siteCopyright);
 
@@ -182,79 +202,261 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
   const hasNav = navLinks.length > 0;
   const hasSiteColumns = siteColumns.length > 0;
   const hasAnyContent = hasBrand || hasNav || hasSiteColumns || hasContact || hasCopyright;
+
+  const onFooterPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (reducedMotion || !footerRef.current || !cursorGlowRef.current) return;
+      const r = footerRef.current.getBoundingClientRect();
+      gsap.to(cursorGlowRef.current, {
+        x: e.clientX - r.left - 200,
+        y: e.clientY - r.top - 200,
+        duration: 0.55,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      });
+    },
+    [reducedMotion]
+  );
+
+  const onFooterPointerLeave = useCallback(() => {
+    if (!cursorGlowRef.current || reducedMotion) return;
+    gsap.to(cursorGlowRef.current, { opacity: 0, duration: 0.45, ease: 'power2.in' });
+  }, [reducedMotion]);
+
+  const onFooterPointerEnter = useCallback(() => {
+    if (!cursorGlowRef.current || reducedMotion) return;
+    gsap.to(cursorGlowRef.current, { opacity: 1, duration: 0.5, ease: 'power2.out' });
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    if (!hasAnyContent || !footerRef.current) return;
+
+    if (reducedMotion) {
+      const reveals = footerRef.current.querySelectorAll('[data-footer-reveal]');
+      gsap.set(reveals, { opacity: 1, y: 0, clearProps: 'transform' });
+      footerRef.current.querySelectorAll('[data-footer-line]').forEach((el) => gsap.set(el, { scaleX: 1 }));
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      const root = footerRef.current;
+      if (!root) return;
+
+      const reveals = root.querySelectorAll('[data-footer-reveal]');
+      if (reveals.length) {
+        gsap.fromTo(
+          reveals,
+          { opacity: 0, y: 36 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.95,
+            stagger: 0.07,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: root,
+              start: 'top 92%',
+            },
+          }
+        );
+      }
+
+      root.querySelectorAll<HTMLElement>('[data-footer-line]').forEach((line) => {
+        gsap.fromTo(
+          line,
+          { scaleX: 0 },
+          {
+            scaleX: 1,
+            duration: 1.15,
+            ease: 'power2.inOut',
+            transformOrigin: 'left center',
+            scrollTrigger: {
+              trigger: line,
+              start: 'top 96%',
+            },
+          }
+        );
+      });
+
+      if (meshRef.current) {
+        gsap.to(meshRef.current, {
+          backgroundPosition: '100% 40%',
+          duration: 20,
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+      if (orbARef.current) {
+        gsap.to(orbARef.current, {
+          xPercent: 10,
+          yPercent: -8,
+          duration: 16,
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+      if (orbBRef.current) {
+        gsap.to(orbBRef.current, {
+          xPercent: -12,
+          yPercent: 10,
+          duration: 20,
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+
+      const dots = particlesRef.current?.querySelectorAll<HTMLElement>('.footer-particle');
+      dots?.forEach((dot, i) => {
+        gsap.to(dot, {
+          y: gsap.utils.random(10, 28) * (i % 2 === 0 ? 1 : -1),
+          opacity: gsap.utils.random(0.08, 0.28),
+          duration: gsap.utils.random(4, 7),
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          delay: i * 0.08,
+        });
+      });
+    }, footerRef);
+
+    return () => ctx.revert();
+  }, [hasAnyContent, reducedMotion]);
+
   if (!hasAnyContent) return null;
 
-  const eyebrowClass = 'text-[11px] font-semibold uppercase tracking-[0.25em]';
+  const eyebrowClass = 'wb-text-on-dark-secondary text-[10px] font-semibold uppercase tracking-[0.38em] opacity-70';
 
   return (
     <footer
-      className="relative w-full overflow-hidden"
-      style={{ backgroundColor: bgColor, color: textColor, fontFamily: themeFonts.body }}
+      ref={footerRef}
+      onPointerMove={onFooterPointerMove}
+      onPointerEnter={onFooterPointerEnter}
+      onPointerLeave={onFooterPointerLeave}
+      className="footer-premium wb-bg-section-dark wb-text-on-dark relative isolate w-full overflow-hidden"
     >
-      <div className="relative max-w-[1400px] mx-auto px-6 sm:px-10 md:px-16 lg:px-24 pt-10 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-y-3 md:gap-x-10 lg:gap-x-16 items-start">
+      <div
+        ref={meshRef}
+        className="pointer-events-none absolute inset-0 opacity-70"
+        style={{
+          background: `linear-gradient(115deg, color-mix(in srgb, ${brandColor} 18%, transparent) 0%, transparent 42%, color-mix(in srgb, var(--wb-text-on-dark) 5%, transparent) 55%, color-mix(in srgb, ${brandColor} 12%, transparent) 100%)`,
+          backgroundSize: '200% 200%',
+          backgroundPosition: '0% 40%',
+        }}
+        aria-hidden
+      />
+      <div
+        ref={orbARef}
+        className="pointer-events-none absolute -left-[18%] top-[25%] h-[min(55vw,420px)] w-[min(55vw,420px)] rounded-full opacity-30 blur-[100px]"
+        style={{
+          background: `radial-gradient(circle, color-mix(in srgb, ${brandColor} 38%, transparent), transparent 68%)`,
+        }}
+        aria-hidden
+      />
+      <div
+        ref={orbBRef}
+        className="pointer-events-none absolute -right-[12%] bottom-[15%] h-[min(48vw,360px)] w-[min(48vw,360px)] rounded-full opacity-25 blur-[90px]"
+        style={{ background: `radial-gradient(circle, color-mix(in srgb, var(--wb-text-on-dark) 9%, transparent) 0%, transparent 70%)` }}
+        aria-hidden
+      />
+
+      <div ref={particlesRef} className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {PARTICLE_LEFT.map((left, i) => (
+          <span
+            key={i}
+            className="footer-particle absolute rounded-full bg-[var(--wb-text-on-dark)]"
+            style={{
+              left: `${left}%`,
+              top: `${(i * 41 + 7) % 85}%`,
+              width: 2,
+              height: 2,
+              opacity: 0.15,
+            }}
+          />
+        ))}
+      </div>
+
+      <div
+        ref={cursorGlowRef}
+        className="pointer-events-none absolute left-0 top-0 h-[400px] w-[400px] rounded-full opacity-0 blur-3xl"
+        style={{
+          background: `radial-gradient(circle, color-mix(in srgb, ${brandColor} 28%, transparent) 0%, transparent 65%)`,
+        }}
+        aria-hidden
+      />
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:color-mix(in_srgb,var(--wb-text-on-dark)_12%,transparent)] to-transparent" aria-hidden />
+
+      <div className="relative z-[1] mx-auto max-w-[1320px] px-6 pb-16 pt-20 sm:px-10 md:px-14 md:pb-20 md:pt-24 lg:px-20">
+        <div className="grid grid-cols-1 gap-y-16 md:grid-cols-12 md:gap-x-12 lg:gap-x-20">
           {hasBrand && (
-            <div className="md:col-span-12 lg:col-span-5 flex flex-col gap-2">
+            <div data-footer-reveal className="md:col-span-12 lg:col-span-5 flex flex-col gap-8">
               {logoUrl && (
-                <div className="relative h-24 w-auto self-start min-w-[120px]">
+                <div className="relative h-16 w-auto self-start md:h-20" style={{ minWidth: 140 }}>
                   <OptimizedImage
                     src={getImageSrc(logoUrl)}
                     alt={logoAlt}
                     fill
-                    sizes="(max-width: 768px) 180px, 260px"
-                    className="object-contain object-left"
+                    sizes="(max-width: 768px) 160px, 220px"
+                    className="object-contain object-left opacity-95"
                   />
                 </div>
               )}
 
               {(businessName || businessTagline) && (
-                <div className="space-y-1">
+                <div className="space-y-3">
                   {businessName && (
-                    <h2 className="text-2xl md:text-3xl font-semibold leading-tight" style={{ color: textColor }}>
+                    <h2
+                      className="max-w-[16ch] text-balance text-[clamp(1.75rem,3.5vw,2.75rem)] font-extralight uppercase leading-[1.05] tracking-[0.14em] wb-text-on-dark"
+                      style={{
+                        fontFamily: themeFonts.heading ? `${themeFonts.heading}, var(--font-heading, ui-serif)` : 'var(--font-heading, ui-serif)',
+                      }}
+                    >
                       {businessName}
                     </h2>
                   )}
-                  {businessTagline && (
-                    <p className={eyebrowClass} style={{ color: mutedText }}>
-                      {businessTagline}
-                    </p>
-                  )}
+                  {businessTagline && <p className={eyebrowClass}>{businessTagline}</p>}
                 </div>
               )}
 
               {resolvedDescription && (
-                <div className="text-sm leading-relaxed max-w-md" style={{ color: mutedText }}>
-                  {isDescriptionTiptap ? (
-                    <TiptapRenderer content={resolvedDescription} as="inline" />
-                  ) : (
-                    <p>{descriptionString}</p>
-                  )}
+                <div
+                  className="wb-text-on-dark-secondary max-w-md text-sm font-light leading-relaxed md:text-[15px]"
+                  style={{
+                    fontFamily: themeFonts.body ? `${themeFonts.body}, ui-sans-serif, system-ui` : undefined,
+                  }}
+                >
+                  {isDescriptionTiptap ? <TiptapRenderer content={resolvedDescription} as="inline" /> : <p>{descriptionString}</p>}
                 </div>
               )}
 
               {socialLinks.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pt-2">
+                <div className="flex flex-wrap items-center gap-3 pt-2">
                   {socialLinks.map((link, idx) => {
-                    const platformKey = typeof link.platform === 'string'
-                      ? link.platform
-                      : String(link.platform || 'social');
+                    const platformKey =
+                      typeof link.platform === 'string' ? link.platform : String(link.platform || 'social');
+                    const Icon = platformIcon(platformKey);
                     return (
                       <a
                         key={link.url || `social-${idx}`}
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5"
+                      className="group/soc wb-text-on-dark-secondary relative flex h-11 w-11 items-center justify-center rounded-full border wb-border-on-dark wb-glass-on-dark backdrop-blur-md transition-all duration-500 hover:-translate-y-0.5 hover:text-[var(--wb-text-on-dark)] hover:border-[color:color-mix(in_srgb,var(--wb-text-on-dark)_22%,transparent)] hover:shadow-[0_12px_40px_color-mix(in_srgb,var(--wb-section-bg-dark)_60%,transparent)]"
                         style={{
-                          color: textColor,
-                          border: `1px solid ${subtleBorder}`,
-                          backgroundColor: subtleBg
+                          boxShadow: `0 0 0 1px color-mix(in srgb, ${brandColor} 12%, transparent)`,
                         }}
                         aria-label={platformKey}
                       >
-                        <span className="text-xs font-bold">
-                          {platformKey.slice(0, 1).toUpperCase()}
-                        </span>
+                        <Icon className="relative z-[1] h-4 w-4" strokeWidth={1.35} />
+                        <span
+                          className="pointer-events-none absolute inset-0 rounded-full opacity-0 blur-md transition-opacity duration-500 group-hover/soc:opacity-100"
+                          style={{
+                            background: `radial-gradient(circle, color-mix(in srgb, ${brandColor} 45%, transparent), transparent 70%)`,
+                          }}
+                        />
                       </a>
                     );
                   })}
@@ -264,39 +466,16 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
           )}
 
           {hasNav && (
-            <div className="md:col-span-6 lg:col-span-3 flex flex-col gap-5 md:pt-20">
-              <h3 className={`${eyebrowClass} sr-only`} style={{ color: mutedText }}>
-                {businessName ? `${businessName} navigation` : 'Site navigation'}
-              </h3>
-              <span className="block w-10 h-px" style={{ backgroundColor: subtleBorder }} aria-hidden />
-              <nav className="flex flex-col gap-3">
+            <div data-footer-reveal className="md:col-span-6 lg:col-span-3 flex flex-col gap-6 md:pt-4 lg:pt-2">
+              <h3 className={`${eyebrowClass}`}>Explore</h3>
+              <div data-footer-line className="h-px w-full max-w-[120px] origin-left scale-x-0 bg-gradient-to-r from-[color:color-mix(in_srgb,var(--wb-text-on-dark)_32%,transparent)] to-transparent" aria-hidden />
+              <nav className="flex flex-col gap-4" aria-label="Footer site links">
                 {navLinks.map((link, idx) => {
                   const isExternal = link.href.startsWith('http://') || link.href.startsWith('https://');
-                  if (isExternal) {
-                    return (
-                      <a
-                        key={`${link.href}-${idx}`}
-                        href={link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group inline-flex items-center gap-2 text-base hover:opacity-80 transition-opacity"
-                        style={{ color: textColor }}
-                      >
-                        <span className="font-light">{link.label}</span>
-                        <ArrowUpRight className="w-4 h-4 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
-                      </a>
-                    );
-                  }
                   return (
-                    <Link
-                      key={`${link.href}-${idx}`}
-                      href={link.href}
-                      className="group inline-flex items-center gap-2 text-base hover:opacity-80 transition-opacity"
-                      style={{ color: textColor }}
-                    >
-                      <span className="font-light">{link.label}</span>
-                      <ArrowUpRight className="w-4 h-4 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
-                    </Link>
+                    <FooterUnderlineLink key={`${link.href}-${idx}`} href={link.href} external={isExternal}>
+                      {link.label}
+                    </FooterUnderlineLink>
                   );
                 })}
               </nav>
@@ -304,36 +483,26 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
           )}
 
           {hasContact && (
-            <div className="md:col-span-6 lg:col-span-4 flex flex-col gap-5 md:pt-20">
+            <div data-footer-reveal className="md:col-span-6 lg:col-span-4 flex flex-col gap-6 md:pt-4 lg:pt-2">
               {isNonEmptyTiptap(contactSectionTitle) || isNonEmptyString(contactSectionTitle) ? (
-                <h3 className={eyebrowClass} style={{ color: mutedText }}>
-                  {typeof contactSectionTitle === 'string' ? (
-                    contactSectionTitle
-                  ) : (
-                    <TiptapRenderer content={contactSectionTitle} as="inline" />
-                  )}
+                <h3 className={eyebrowClass}>
+                  {typeof contactSectionTitle === 'string' ? contactSectionTitle : <TiptapRenderer content={contactSectionTitle} as="inline" />}
                 </h3>
               ) : (
-                <h3 className={`${eyebrowClass} sr-only`} style={{ color: mutedText }}>
-                  Contact
-                </h3>
+                <h3 className={eyebrowClass}>Contact</h3>
               )}
-              <span className="block w-10 h-px" style={{ backgroundColor: subtleBorder }} aria-hidden />
-              <ul className="flex flex-col gap-4 text-sm">
+              <div data-footer-line className="h-px w-full max-w-[120px] origin-left scale-x-0 bg-gradient-to-r from-[color:color-mix(in_srgb,var(--wb-text-on-dark)_32%,transparent)] to-transparent" aria-hidden />
+              <ul className="flex flex-col gap-5 text-sm">
                 {contactPhone && (
                   <li>
                     <a
                       href={`tel:${contactPhone}`}
-                      className="group inline-flex items-start gap-3 hover:opacity-80 transition-opacity"
-                      style={{ color: textColor }}
+                      className="group/contact wb-text-on-dark-secondary inline-flex items-start gap-3 transition-colors hover:text-[var(--wb-text-on-dark)]"
                     >
-                      <span
-                        className="mt-0.5 inline-flex w-8 h-8 rounded-full items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: subtleBg, border: `1px solid ${subtleBorder}` }}
-                      >
-                        <Phone className="w-3.5 h-3.5" />
+                      <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border wb-border-on-dark wb-glass-on-dark transition-all duration-300 group-hover/contact:border-[color:color-mix(in_srgb,var(--wb-text-on-dark)_22%,transparent)] group-hover/contact:shadow-[0_0_20px_-4px_color-mix(in_srgb,var(--wb-text-on-dark)_10%,transparent)]">
+                        <Phone className="h-3.5 w-3.5" strokeWidth={1.25} />
                       </span>
-                      <span className="text-base font-light">{contactPhone}</span>
+                      <span className="pt-1 text-[15px] font-light tracking-wide">{contactPhone}</span>
                     </a>
                   </li>
                 )}
@@ -341,30 +510,33 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
                   <li>
                     <a
                       href={`mailto:${contactEmail}`}
-                      className="group inline-flex items-start gap-3 hover:opacity-80 transition-opacity break-all"
-                      style={{ color: textColor }}
+                      className="group/contact wb-text-on-dark-secondary inline-flex items-start gap-3 break-all transition-colors hover:text-[var(--wb-text-on-dark)]"
                     >
-                      <span
-                        className="mt-0.5 inline-flex w-8 h-8 rounded-full items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: subtleBg, border: `1px solid ${subtleBorder}` }}
-                      >
-                        <Mail className="w-3.5 h-3.5" />
+                      <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border wb-border-on-dark wb-glass-on-dark transition-all duration-300 group-hover/contact:border-[color:color-mix(in_srgb,var(--wb-text-on-dark)_22%,transparent)] group-hover/contact:shadow-[0_0_20px_-4px_color-mix(in_srgb,var(--wb-text-on-dark)_10%,transparent)]">
+                        <Mail className="h-3.5 w-3.5" strokeWidth={1.25} />
                       </span>
-                      <span className="text-base font-light">{contactEmail}</span>
+                      <span className="pt-1 text-[15px] font-light tracking-wide">{contactEmail}</span>
                     </a>
                   </li>
                 )}
                 {hasAddress && (
-                  <li className="flex items-start gap-3">
-                    <span
-                      className="mt-0.5 inline-flex w-8 h-8 rounded-full items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: subtleBg, border: `1px solid ${subtleBorder}` }}
-                    >
-                      <MapPin className="w-3.5 h-3.5" />
+                  <li className="flex items-start gap-3 wb-text-on-dark-secondary">
+                    <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border wb-border-on-dark wb-glass-on-dark">
+                      <MapPin className="h-3.5 w-3.5" strokeWidth={1.25} />
                     </span>
-                    <address className="not-italic text-sm leading-relaxed" style={{ color: mutedText }}>
-                      {addressLine1 && <>{addressLine1}<br /></>}
-                      {addressLine2 && <>{addressLine2}<br /></>}
+                    <address className="not-italic text-[13px] font-light leading-relaxed tracking-wide md:text-sm">
+                      {addressLine1 && (
+                        <>
+                          {addressLine1}
+                          <br />
+                        </>
+                      )}
+                      {addressLine2 && (
+                        <>
+                          {addressLine2}
+                          <br />
+                        </>
+                      )}
                       {addressCountry && <>{addressCountry}</>}
                     </address>
                   </li>
@@ -375,44 +547,19 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
         </div>
 
         {hasSiteColumns && (
-          <div className="mt-16 pt-12" style={{ borderTop: `1px solid ${subtleBorder}` }}>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-y-12 md:pt-20">
+          <div data-footer-reveal className="mt-20 border-t wb-border-on-dark pt-16 md:mt-24 md:pt-20">
+            <div className="grid grid-cols-2 gap-x-10 gap-y-14 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-16">
               {siteColumns.map((col, colIdx) => (
                 <div key={`${col.title}-${colIdx}`} className="flex flex-col gap-5">
-                  {col.title && (
-                    <h3 className={eyebrowClass} style={{ color: mutedText }}>
-                      {col.title}
-                    </h3>
-                  )}
-                  <span className="block w-10 h-px" style={{ backgroundColor: subtleBorder }} aria-hidden />
-                  <nav className="flex flex-col gap-3">
+                  {col.title && <h3 className={eyebrowClass}>{col.title}</h3>}
+                  <div data-footer-line className="h-px w-full max-w-[100px] origin-left scale-x-0 bg-gradient-to-r from-[color:color-mix(in_srgb,var(--wb-text-on-dark)_28%,transparent)] to-transparent" aria-hidden />
+                  <nav className="flex flex-col gap-3" aria-label={col.title || 'Footer links'}>
                     {col.links.map((link, linkIdx) => {
                       const isExternal = link.url.startsWith('http://') || link.url.startsWith('https://');
-                      if (isExternal) {
-                        return (
-                          <a
-                            key={`${link.url}-${linkIdx}`}
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group inline-flex items-center gap-2 text-base hover:opacity-80 transition-opacity"
-                            style={{ color: textColor }}
-                          >
-                            <span className="font-light">{link.label}</span>
-                            <ArrowUpRight className="w-4 h-4 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
-                          </a>
-                        );
-                      }
                       return (
-                        <Link
-                          key={`${link.url}-${linkIdx}`}
-                          href={link.url}
-                          className="group inline-flex items-center gap-2 text-base hover:opacity-80 transition-opacity"
-                          style={{ color: textColor }}
-                        >
-                          <span className="font-light">{link.label}</span>
-                          <ArrowUpRight className="w-4 h-4 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
-                        </Link>
+                        <FooterUnderlineLink key={`${link.url}-${linkIdx}`} href={link.url} external={isExternal}>
+                          {link.label}
+                        </FooterUnderlineLink>
                       );
                     })}
                   </nav>
@@ -424,13 +571,14 @@ export const Footer: React.FC<FooterProps> = ({ page }) => {
       </div>
 
       {hasCopyright && (
-        <div className="relative" style={{ borderTop: `1px solid ${subtleBorder}` }}>
-          <div className="max-w-[1400px] mx-auto px-6 sm:px-10 md:px-16 lg:px-24 py-5">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 text-xs" style={{ color: mutedText }}>
+        <div data-footer-reveal className="relative border-t wb-border-on-dark">
+          <div data-footer-line className="absolute left-0 top-0 hidden h-px w-full origin-left scale-x-0 bg-gradient-to-r from-[color:color-mix(in_srgb,var(--wb-text-on-dark)_18%,transparent)] via-transparent to-[color:color-mix(in_srgb,var(--wb-text-on-dark)_18%,transparent)] md:block" aria-hidden />
+          <div className="mx-auto max-w-[1320px] px-6 py-8 sm:px-10 md:px-14 lg:px-20">
+            <div className="wb-text-on-dark-secondary flex flex-col gap-2 text-[11px] font-light uppercase tracking-[0.28em] opacity-75 md:flex-row md:items-center md:justify-between">
               {overrideCopyright ? (
                 <span>{overrideCopyright}</span>
               ) : siteCopyright ? (
-                <div>
+                <div className="normal-case tracking-normal opacity-85">
                   <TiptapRenderer content={siteCopyright} as="inline" />
                 </div>
               ) : null}

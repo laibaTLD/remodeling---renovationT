@@ -29,17 +29,25 @@ function buildImageRemotePatterns(): RemotePattern[] {
 const nextConfig: NextConfig = {
   images: {
     formats: ["image/webp"],
+    qualities: [75, 90, 95, 100],
     remotePatterns: buildImageRemotePatterns(),
   },
   async rewrites() {
+    const raw = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+    const remoteApi =
+      raw && raw.startsWith('http')
+        ? raw.replace(/\/$/, '')
+        : null;
+    const apiOrigin = remoteApi ?? 'http://localhost:5000/api';
+
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:5000/api/:path*',
+        destination: `${apiOrigin}/:path*`,
       },
       {
         source: '/uploads/:path*',
-        destination: 'http://localhost:5000/api/uploads/:path*',
+        destination: `${apiOrigin}/uploads/:path*`,
       },
     ];
   },

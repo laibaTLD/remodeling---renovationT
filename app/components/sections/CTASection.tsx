@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Page } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
 import { getImageSrc, cn } from '@/app/lib/utils';
-import { useThemeColors } from '@/app/hooks/useTheme';
+import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
+import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
+import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 
@@ -18,178 +20,380 @@ interface CTASectionProps {
   className?: string;
 }
 
+const PARTICLE_SEED = [12, 18, 24, 30, 36, 42, 55, 62, 70, 78, 85, 92, 8, 65, 33, 48];
+
 export const CTASection: React.FC<CTASectionProps> = ({ ctaSection, className }) => {
   const themeColors = useThemeColors();
+  const themeFonts = useThemeFonts();
+  const reducedMotion = usePrefersReducedMotion();
+  
+  // Use the theme's primary button color as the brand accent
+  const brandColor = themeColors.primaryButton;
+
   const sectionRef = useRef<HTMLElement>(null);
-  const textSectionRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const bgImageContainerRef = useRef<HTMLDivElement>(null);
-  const bgImageRef = useRef<HTMLDivElement>(null);
+  const bgParallaxRef = useRef<HTMLDivElement>(null);
+  const meshRef = useRef<HTMLDivElement>(null);
+  const contentParallaxRef = useRef<HTMLDivElement>(null);
+  const orbARef = useRef<HTMLDivElement>(null);
+  const orbBRef = useRef<HTMLDivElement>(null);
+  const particlesRef = useRef<HTMLDivElement>(null);
+  const pulseRef = useRef<HTMLDivElement>(null);
+  const ctaWrapRef = useRef<HTMLDivElement>(null);
+  const ctaInnerRef = useRef<HTMLAnchorElement>(null);
+  const glowFollowRef = useRef<HTMLDivElement>(null);
+
+  const backgroundImageUrl = ctaSection?.backgroundImage ? getImageSrc(ctaSection.backgroundImage) : null;
+  const customBg = ctaSection?.backgroundColor?.trim();
+
+  const magneticMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const wrap = ctaWrapRef.current;
+      const inner = ctaInnerRef.current;
+      if (!wrap || !inner || reducedMotion) return;
+      const r = wrap.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      const maxR = 120;
+      
+      if (dist < maxR && dist > 0) {
+        const pull = 1 - dist / maxR;
+        gsap.to(inner, { x: dx * 0.18 * pull, y: dy * 0.18 * pull, duration: 0.35, ease: 'power2.out', overwrite: 'auto' });
+      } else {
+        gsap.to(inner, { x: 0, y: 0, duration: 0.45, ease: 'power3.out', overwrite: 'auto' });
+      }
+      
+      if (glowFollowRef.current) {
+        const gx = e.clientX - r.left - 40;
+        const gy = e.clientY - r.top - 40;
+        gsap.to(glowFollowRef.current, { x: gx, y: gy, duration: 0.55, ease: 'power3.out', overwrite: 'auto' });
+      }
+    },
+    [reducedMotion]
+  );
+
+  const magneticLeave = useCallback(() => {
+    if (!ctaInnerRef.current || reducedMotion) return;
+    gsap.to(ctaInnerRef.current, { x: 0, y: 0, duration: 0.55, ease: 'power3.out' });
+    if (glowFollowRef.current) {
+      gsap.to(glowFollowRef.current, { opacity: 0, duration: 0.35, ease: 'power2.in' });
+    }
+  }, [reducedMotion]);
+
+  const magneticEnter = useCallback(() => {
+    if (!glowFollowRef.current || reducedMotion) return;
+    gsap.to(glowFollowRef.current, { opacity: 0.85, duration: 0.4, ease: 'power2.out' });
+  }, [reducedMotion]);
 
   useEffect(() => {
-    if (!ctaSection?.enabled) return;
+    if (!ctaSection?.enabled || !sectionRef.current) return;
+
+    if (reducedMotion) {
+      const reveals = sectionRef.current.querySelectorAll('[data-cta-reveal]');
+      gsap.set(reveals, { opacity: 1, y: 0, scale: 1 });
+      return;
+    }
 
     const ctx = gsap.context(() => {
-      // 1. Staggered Text Reveal
-      const elements = contentRef.current?.children;
-      if (elements) {
-        gsap.fromTo(elements,
-          { y: 30, opacity: 0 },
+      const reveals = sectionRef.current?.querySelectorAll('[data-cta-reveal]');
+      if (reveals?.length) {
+        gsap.fromTo(
+          reveals,
+          { opacity: 0, y: 40, scale: 0.94 },
           {
-            y: 0,
             opacity: 1,
-            stagger: 0.15,
+            y: 0,
+            scale: 1,
             duration: 1.2,
-            ease: 'power3.out',
+            stagger: 0.15,
+            ease: 'expo.out',
             scrollTrigger: {
-              trigger: contentRef.current,
+              trigger: sectionRef.current,
               start: 'top 85%',
-            }
+            },
           }
         );
       }
 
-      // 2. Parallax Effect between Text Section and Image
-      // We want the white text section to feel like it's sliding ABOVE the expanding image
-      if (bgImageRef.current) {
-        gsap.fromTo(bgImageRef.current,
-          { yPercent: -20 },
-          {
-            yPercent: 10,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: 'top bottom',
-              end: 'bottom top',
-              scrub: true,
-            }
-          }
-        );
+      // Animated Mesh Gradient using brand colors
+      if (meshRef.current) {
+        gsap.to(meshRef.current, {
+          backgroundPosition: '100% 50%',
+          duration: 20,
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+        });
       }
 
-      // Slow upward move for the text section itself to create "floating" feel over the image
-      if (textSectionRef.current) {
-        gsap.fromTo(textSectionRef.current,
-          { y: 0 },
-          {
-            y: -50,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: 'top bottom',
-              end: 'bottom top',
-              scrub: true,
+      // Subtle floating orbs
+      [orbARef, orbBRef].forEach((ref, i) => {
+        if (ref.current) {
+          gsap.to(ref.current, {
+            xPercent: i === 0 ? 15 : -15,
+            yPercent: i === 0 ? -10 : 10,
+            duration: 15 + (i * 5),
+            ease: 'sine.inOut',
+            repeat: -1,
+            yoyo: true,
+          });
+        }
+      });
+
+      // Ambient Particles
+      const dots = particlesRef.current?.querySelectorAll<HTMLElement>('.cta-particle');
+      dots?.forEach((dot, i) => {
+        gsap.to(dot, {
+          y: gsap.utils.random(15, 35),
+          opacity: gsap.utils.random(0.1, 0.4),
+          duration: gsap.utils.random(4, 7),
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          delay: i * 0.1,
+        });
+      });
+
+      const parallaxTrigger = sectionRef.current;
+      if (parallaxTrigger) {
+        const scrollParallax = {
+          trigger: parallaxTrigger,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 1,
+        };
+
+        if (bgParallaxRef.current) {
+          gsap.fromTo(
+            bgParallaxRef.current,
+            { yPercent: -18, scale: 1.12 },
+            {
+              yPercent: 18,
+              scale: 1.12,
+              ease: 'none',
+              scrollTrigger: scrollParallax,
             }
-          }
-        );
+          );
+        }
+
+        if (meshRef.current) {
+          gsap.fromTo(
+            meshRef.current,
+            { yPercent: -8 },
+            {
+              yPercent: 12,
+              ease: 'none',
+              scrollTrigger: { ...scrollParallax, scrub: 1.4 },
+            }
+          );
+        }
+
+        if (contentParallaxRef.current) {
+          gsap.fromTo(
+            contentParallaxRef.current,
+            { y: 48 },
+            {
+              y: -48,
+              ease: 'none',
+              scrollTrigger: { ...scrollParallax, scrub: 0.85 },
+            }
+          );
+        }
+
+        if (particlesRef.current) {
+          gsap.fromTo(
+            particlesRef.current,
+            { y: 30 },
+            {
+              y: -30,
+              ease: 'none',
+              scrollTrigger: { ...scrollParallax, scrub: 1.2 },
+            }
+          );
+        }
       }
     }, sectionRef);
 
     return () => ctx.revert();
-  }, [ctaSection]);
+  }, [ctaSection?.enabled, reducedMotion, backgroundImageUrl]);
 
   if (!ctaSection?.enabled) return null;
-
-  const brandColor = themeColors.primaryButton;
-  const primaryTextColor = themeColors.lightPrimaryText;
-  const secondaryTextColor = themeColors.lightSecondaryText;
-
-  const backgroundImageUrl = ctaSection.backgroundImage ? getImageSrc(ctaSection.backgroundImage) : null;
 
   return (
     <section
       ref={sectionRef}
-      className={cn('relative flex flex-col items-center bg-white', className)}
+      className={cn(
+        'relative isolate flex min-h-[85vh] flex-col items-center justify-center overflow-hidden py-24 wb-bg-section-dark wb-text-on-dark lg:py-40',
+        className
+      )}
+      style={{ 
+        backgroundColor: customBg || 'var(--wb-section-bg-dark)',
+        fontFamily: themeFonts.body 
+      }}
     >
-      {/* 1. White Statement Block - Centered Editorial Design */}
+      {/* MESH GRADIENT OVERLAY */}
       <div
-        ref={textSectionRef}
-        className="relative z-20 w-fit p-10 flex flex-col items-center text-center px-6 bg-white"
-      >
-        <div ref={contentRef} className="max-w-4xl flex flex-col items-center">
+        ref={meshRef}
+        className="pointer-events-none absolute inset-0 opacity-40 mix-blend-soft-light"
+        style={{
+          background: `linear-gradient(135deg, ${brandColor} 0%, transparent 40%, ${brandColor} 70%, transparent 100%)`,
+          backgroundSize: '200% 200%',
+        }}
+        aria-hidden
+      />
 
-          {/* Header Title - Huge, Centered, Multiple Lines */}
-          {ctaSection.title && (
-            <h2
-              className="text-4xl md:text-5xl lg:text-7xl font-sans tracking-tight leading-[1.1] uppercase font-light mb-12"
-              style={{ color: primaryTextColor }}
-            >
-              <div className="text-balance [&_strong]:text-primary [&_span.brand]:text-primary">
-                {/* Styling logic for "exactly like screenshot": any bold text will be red */}
-                <style jsx>{`
-                    h2 :global(strong), h2 :global(b) {
-                        color: ${brandColor} !important;
-                        font-weight: 300; /* Keep it light weight even if bolded for color */
-                    }
-                  `}</style>
-                <TiptapRenderer content={ctaSection.title} as="inline" />
-              </div>
-            </h2>
-          )}
-
-          {/* Subheading / Description */}
-          {ctaSection.description && (
-            <div
-              className="max-w-2xl text-lg md:text-xl lg:text-2xl font-light leading-relaxed tracking-wide opacity-80 mb-8"
-              style={{ color: secondaryTextColor }}
-            >
-              <TiptapRenderer content={ctaSection.description} />
-            </div>
-          )}
-
-          {/* Note Text (Optional Small Detail) */}
-          {((ctaSection as any).subtitle || (ctaSection as any).noteText) && (
-            <div className="text-[10px] md:text-[11px] font-light tracking-[0.2em] opacity-60 mb-16" style={{ color: primaryTextColor }}>
-              <TiptapRenderer content={(ctaSection as any).subtitle || (ctaSection as any).noteText} as="inline" />
-            </div>
-          )}
-
-          {/* Circular Red Discovery CTA */}
-          {ctaSection.primaryButton && (
-            <div className="">
-              <Link
-                href={ctaSection.primaryButton.href || '/'}
-                className="group inline-flex items-center gap-6"
-              >
-                <span
-                  className="text-[10px] md:text-[11px] font-bold tracking-[0.3em] uppercase transition-colors"
-                  style={{ color: brandColor }}
-                >
-                  {ctaSection.primaryButton.label}
-                </span>
-                <div
-                  className="w-14 h-14 rounded-full border flex items-center justify-center transition-all duration-700 group-hover:scale-110"
-                  style={{ borderColor: brandColor, color: brandColor }}
-                >
-                  <svg className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 2. Panoramic Image Reveal - Overlaps the bottom of the white block */}
+      {/* BACKGROUND IMAGE & SHADING */}
       {backgroundImageUrl && (
-        <div
-          ref={bgImageContainerRef}
-          className="relative w-full h-[60vh] md:h-[85vh] lg:h-[110vh] overflow-hidden -mt-32 md:-mt-48 lg:-mt-64 z-10"
-        >
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <div
-            ref={bgImageRef}
-            className="absolute inset-x-0 -top-20 h-[140%] bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundImageUrl})` }}
+            ref={bgParallaxRef}
+            className="absolute -top-[15%] left-0 h-[130%] w-full will-change-transform"
           >
-            {/* Subtle Linear Fade for smooth overlap transition */}
-            <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white to-transparent" />
+            <OptimizedImage
+              src={backgroundImageUrl}
+              alt=""
+              fill
+              className="object-cover opacity-20"
+              sizes="100vw"
+            />
           </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--wb-section-bg-dark)] via-transparent to-[var(--wb-section-bg-dark)]" />
         </div>
       )}
 
-      {/* Spacing for sections below */}
-      {!backgroundImageUrl && <div className="h-32 bg-white w-full" />}
+      {/* DYNAMIC AMBIENT ORBS */}
+      <div
+        ref={orbARef}
+        className="pointer-events-none absolute -left-[10%] top-0 h-[600px] w-[600px] rounded-full opacity-[0.15] blur-[120px]"
+        style={{ background: brandColor }}
+        aria-hidden
+      />
+      <div
+        ref={orbBRef}
+        className="pointer-events-none absolute -right-[10%] bottom-0 h-[500px] w-[500px] rounded-full opacity-[0.1] blur-[100px]"
+        style={{ background: brandColor }}
+        aria-hidden
+      />
+
+      {/* CONTENT WRAPPER */}
+      <div
+        ref={contentParallaxRef}
+        className="container relative z-10 mx-auto px-6 text-center will-change-transform"
+      >
+        
+        {/* SMALL TOP LABEL (Optional/Legacy check) */}
+        {(ctaSection as any).subtitle && (
+          <div 
+            data-cta-reveal 
+            className="mb-8 text-[10px] font-bold uppercase tracking-[0.5em] opacity-60"
+            style={{ color: brandColor }}
+          >
+             <TiptapRenderer content={(ctaSection as any).subtitle} as="inline" />
+          </div>
+        )}
+
+        {/* MAIN TITLE */}
+        {ctaSection.title && (
+          <h2
+            data-cta-reveal
+            className="mx-auto mb-10 max-w-4xl text-balance text-[clamp(2.5rem,7vw,5.5rem)] font-light leading-[1.05] tracking-tight"
+            style={{ fontFamily: themeFonts.heading }}
+          >
+            <TiptapRenderer content={ctaSection.title} as="inline" />
+          </h2>
+        )}
+
+        {/* DESCRIPTION */}
+        {ctaSection.description && (
+          <div
+            data-cta-reveal
+            className="mx-auto mb-16 max-w-2xl text-lg font-light leading-relaxed opacity-70"
+          >
+            <TiptapRenderer content={ctaSection.description} />
+          </div>
+        )}
+
+        {/* CTA BUTTON AREA */}
+        {ctaSection.primaryButton && (
+          <div data-cta-reveal className="relative inline-block">
+            {/* Pulsing Aura */}
+            <div
+              ref={pulseRef}
+              className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-3xl"
+              style={{ background: brandColor }}
+              aria-hidden
+            />
+
+            <div
+              ref={ctaWrapRef}
+              className="relative"
+              onPointerMove={magneticMove}
+              onPointerLeave={magneticLeave}
+              onPointerEnter={magneticEnter}
+            >
+              {/* Dynamic Mouse Glow */}
+              <div
+                ref={glowFollowRef}
+                className="pointer-events-none absolute left-0 top-0 h-24 w-24 rounded-full opacity-0 blur-2xl"
+                style={{ background: `radial-gradient(circle, ${brandColor} 60%, transparent 100%)` }}
+                aria-hidden
+              />
+
+              <Link
+                ref={ctaInnerRef}
+                href={ctaSection.primaryButton.href || '/'}
+                className="group relative inline-flex items-center gap-6 overflow-hidden rounded-full border px-12 py-6 text-[11px] font-bold uppercase tracking-[0.4em] transition-all duration-500 hover:scale-105 active:scale-95"
+                style={{ 
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(20px)'
+                }}
+              >
+                {/* Button Text */}
+                <span className="relative z-10 text-white group-hover:text-white">
+                  {ctaSection.primaryButton.label}
+                </span>
+
+                {/* Arrow Icon */}
+                <span 
+                  className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 transition-transform duration-500 group-hover:rotate-45"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                >
+                  <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </span>
+
+                {/* Hover Background Slide */}
+                <div 
+                  className="absolute inset-0 -z-10 translate-y-full transition-transform duration-500 group-hover:translate-y-0"
+                  style={{ backgroundColor: brandColor }}
+                />
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* AMBIENT PARTICLES LAYER */}
+      <div ref={particlesRef} className="pointer-events-none absolute inset-0" aria-hidden>
+        {PARTICLE_SEED.map((left, i) => (
+          <div
+            key={i}
+            className="cta-particle absolute rounded-full"
+            style={{
+              left: `${left}%`,
+              top: `${(i * 41) % 95}%`,
+              width: i % 2 === 0 ? '2px' : '3px',
+              height: i % 2 === 0 ? '2px' : '3px',
+              backgroundColor: brandColor,
+              opacity: 0.2
+            }}
+          />
+        ))}
+      </div>
     </section>
   );
 };

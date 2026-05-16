@@ -1,212 +1,649 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  useEffect,
+  useRef
+} from 'react';
+
 import { Page } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
-import { cn, getImageSrc } from '@/app/lib/utils';
+import {
+  cn,
+  getImageSrc,
+  TIPTAP_INHERIT,
+  type SectionSurfaceTone
+} from '@/app/lib/utils';
+
 import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
-import { useThemeColors } from '@/app/hooks/useTheme';
+
+import {
+  useThemeColors,
+  useThemeFonts
+} from '@/app/hooks/useTheme';
+
+import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion';
+
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 
+import {
+  ArrowUpRight,
+  Sparkles
+} from 'lucide-react';
+
 if (typeof window !== 'undefined') {
-   gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger);
 }
 
 interface CompanyDetailSectionProps {
-   companyDetailSection: Page['companyDetailSection'];
-   className?: string;
+  companyDetailSection: Page['companyDetailSection'];
+  className?: string;
 }
 
-export const CompanyDetailSection: React.FC<CompanyDetailSectionProps> = ({ companyDetailSection, className }) => {
-   const themeColors = useThemeColors();
-   const containerRef = useRef<HTMLDivElement>(null);
-   const stickyTitleRef = useRef<HTMLDivElement>(null);
-   const [isMounted, setIsMounted] = useState(false);
+function sectionBgCssVar(
+  tone: SectionSurfaceTone
+) {
+  return tone === 'light'
+    ? 'var(--wb-section-bg-light)'
+    : 'var(--wb-section-bg-dark)';
+}
 
-   useEffect(() => {
-      setIsMounted(true);
-   }, []);
+function resolveDetailImageRaw(
+  detail: {
+    image?:
+      | string
+      | {
+          url?: string;
+          altText?: string;
+        };
+    imageUrl?: string;
+  }
+): string | undefined {
+  const img = detail?.image;
 
-   useEffect(() => {
-      if (!isMounted || !companyDetailSection?.enabled) return;
+  if (
+    typeof img === 'string' &&
+    img.trim()
+  )
+    return img;
 
-      const timer = setTimeout(() => {
-         const ctx = gsap.context(() => {
-            
-            // 1. HERO PINNING (The Caledonian "Philosophy" Title)
-            if (stickyTitleRef.current) {
-               ScrollTrigger.create({
-                  trigger: stickyTitleRef.current,
-                  start: "top top",
-                  end: "bottom top",
-                  pin: true,
-                  pinSpacing: false,
-                  scrub: true,
-               });
+  if (
+    img &&
+    typeof img === 'object' &&
+    img.url
+  )
+    return img.url;
 
-               gsap.to(stickyTitleRef.current.querySelector('.title-inner'), {
-                  scale: 0.9,
-                  opacity: 0,
-                  ease: 'none',
-                  scrollTrigger: {
-                     trigger: stickyTitleRef.current,
-                     start: 'top top',
-                     end: 'bottom top',
-                     scrub: true,
-                  }
-               });
+  if (
+    detail?.imageUrl?.trim()
+  )
+    return detail.imageUrl;
+
+  return undefined;
+}
+
+function getDetailImageSrc(
+  detail: Parameters<
+    typeof resolveDetailImageRaw
+  >[0]
+): string {
+  const raw =
+    resolveDetailImageRaw(detail);
+
+  return raw
+    ? getImageSrc(raw)
+    : '';
+}
+
+function getDetailImageAlt(
+  detail: Parameters<
+    typeof resolveDetailImageRaw
+  >[0],
+  fallback?: string
+): string {
+  const img = detail?.image;
+
+  if (
+    img &&
+    typeof img === 'object' &&
+    img.altText
+  )
+    return img.altText;
+
+  return fallback || '';
+}
+
+export const CompanyDetailSection: React.FC<
+  CompanyDetailSectionProps
+> = ({
+  companyDetailSection,
+  className
+}) => {
+  const themeColors =
+    useThemeColors();
+
+  const themeFonts =
+    useThemeFonts();
+
+  const reducedMotion =
+    usePrefersReducedMotion();
+
+  const brandColor =
+    themeColors.primaryButton;
+
+  const sectionBgVar =
+    sectionBgCssVar('light');
+
+  const rootRef =
+    useRef<HTMLElement>(null);
+
+  const stepRefs = useRef<
+    (HTMLDivElement | null)[]
+  >([]);
+
+  const details =
+    companyDetailSection?.details?.filter(
+      Boolean
+    ) ?? [];
+
+  useEffect(() => {
+    if (
+      !companyDetailSection?.enabled ||
+      !rootRef.current ||
+      reducedMotion
+    )
+      return;
+
+    const ctx = gsap.context(() => {
+      stepRefs.current.forEach(
+        (step, index) => {
+          if (!step) return;
+
+          const media =
+            step.querySelector(
+              '[data-media]'
+            );
+
+          const content =
+            step.querySelector(
+              '[data-content]'
+            );
+
+          gsap.fromTo(
+            step,
+            {
+              opacity: 0,
+              y: 80
+            },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 1,
+              ease: 'power4.out',
+              scrollTrigger: {
+                trigger: step,
+                start: 'top 82%'
+              }
             }
+          );
 
-            // 2. SUB-SECTION PARALLAX & PINNING
-            const sections = gsap.utils.toArray<HTMLElement>('.story-journey-part');
-            sections.forEach((section) => {
-               const imgContainer = section.querySelector('.story-image-container');
-               const img = section.querySelector('.story-image-container img');
-               const bar = section.querySelector('.story-detail-bar');
+          if (media) {
+            gsap.fromTo(
+              media,
+              {
+                scale: 1.08,
+                opacity: 0
+              },
+              {
+                scale: 1,
+                opacity: 1,
+                duration: 1.2,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: step,
+                  start: 'top 80%'
+                }
+              }
+            );
+          }
 
-               // PIN THE IMAGE: It stays fixed while the bar scrolls over it
-               if (imgContainer) {
-                  ScrollTrigger.create({
-                     trigger: imgContainer,
-                     start: "top top",
-                     endTrigger: bar, // Keep pinned until the text bar finishes
-                     end: "bottom bottom",
-                     pin: true,
-                     pinSpacing: false,
-                  });
-               }
+          if (content) {
+            gsap.fromTo(
+              content.children,
+              {
+                opacity: 0,
+                y: 24
+              },
+              {
+                opacity: 1,
+                y: 0,
+                stagger: 0.08,
+                duration: 0.8,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: step,
+                  start: 'top 84%'
+                }
+              }
+            );
+          }
+        }
+      );
+    }, rootRef);
 
-               // IMAGE INTERNAL PARALLAX: The image moves inside its pinned container
-               if (img) {
-                  gsap.fromTo(img, 
-                     { yPercent: -15, scale: 1.1 },
-                     {
-                        yPercent: 15,
-                        scale: 1.2,
-                        ease: 'none',
-                        scrollTrigger: {
-                           trigger: section,
-                           start: 'top bottom',
-                           end: 'bottom top',
-                           scrub: true
-                        }
-                     }
-                  );
-               }
+    return () => ctx.revert();
+  }, [
+    companyDetailSection?.enabled,
+    reducedMotion
+  ]);
 
-               // TEXT REVEAL
-               if (bar) {
-                  gsap.fromTo(bar.querySelectorAll('.reveal-text'),
-                     { opacity: 0, y: 100 },
-                     {
-                        opacity: 1,
-                        y: 0,
-                        stagger: 0.15,
-                        duration: 1.5,
-                        ease: 'power4.out',
-                        scrollTrigger: {
-                           trigger: bar,
-                           start: "top 80%",
-                        }
-                     }
-                  );
-               }
-            });
+  if (
+    !companyDetailSection?.enabled
+  )
+    return null;
 
-         }, containerRef);
-
-         return () => ctx.revert();
-      }, 100);
-
-      return () => clearTimeout(timer);
-   }, [companyDetailSection, isMounted]);
-
-   if (!companyDetailSection?.enabled) return null;
-
-   const details = companyDetailSection.details || [];
-   const brandColor = themeColors.primaryButton;
-
-   return (
-      <div 
-         ref={containerRef} 
-         className={cn("relative w-full overflow-hidden", className)} 
-         style={{ backgroundColor: brandColor }} 
+  if (details.length === 0) {
+    return (
+      <section
+        className={cn(
+          'py-24',
+          className
+        )}
+        style={{
+          backgroundColor:
+            themeColors.pageBackground
+        }}
       >
-         {/* PHASE 1: HERO TITLE */}
-         <section
-            ref={stickyTitleRef}
-            className="relative h-screen w-full flex items-center justify-center z-10"
-            style={{ backgroundColor: themeColors.pageBackground }}
-         >
-            <div className="title-inner w-full text-center select-none px-6">
-               {companyDetailSection.title && (
-                  <h2 className="text-[10vw] md:text-[12vw] font-bold uppercase tracking-[-0.05em] leading-none" style={{ color: brandColor }}>
-                     <TiptapRenderer content={companyDetailSection.title} as="inline" />
-                  </h2>
-               )}
+        <div className="container mx-auto px-6 text-center">
+          <p
+            className="text-sm font-light"
+            style={{
+              color:
+                themeColors.secondaryText,
+              fontFamily:
+                themeFonts.body
+            }}
+          >
+            Add company details
+            inside the builder to
+            populate this section.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      ref={rootRef}
+      className={cn(
+        'relative overflow-hidden py-24 md:py-32 lg:py-40',
+        className
+      )}
+      style={{
+        backgroundColor:
+          themeColors.pageBackground,
+        fontFamily:
+          themeFonts.body
+      }}
+    >
+      {/* Ambient Glow */}
+      <div
+        className="pointer-events-none absolute left-0 top-0 h-[600px] w-[600px] rounded-full blur-[140px] opacity-[0.08]"
+        style={{
+          backgroundColor:
+            brandColor
+        }}
+      />
+
+      <div className="container relative z-10 mx-auto px-6">
+        {/* Header */}
+        <div className="max-w-4xl mb-20 lg:mb-28">
+          <div className="mb-7 flex items-center gap-5">
+            <div
+              className="h-px w-14"
+              style={{
+                background:
+                  brandColor
+              }}
+            />
+
+            <span
+              className="text-[11px] uppercase tracking-[0.4em] font-semibold"
+              style={{
+                color: themeColors.secondaryText,
+                fontFamily: themeFonts.body
+              }}
+            >
+              Process
+            </span>
+          </div>
+
+          {companyDetailSection.title && (
+            <h2
+              className="text-[clamp(2.5rem,6vw,6rem)] font-extralight uppercase leading-[0.95] tracking-[-0.04em]"
+              style={{
+                color:
+                  themeColors.mainText,
+                fontFamily:
+                  themeFonts.heading
+              }}
+            >
+              <TiptapRenderer
+                content={
+                  companyDetailSection.title
+                }
+                as="inline"
+                className={
+                  TIPTAP_INHERIT
+                }
+              />
+            </h2>
+          )}
+
+          {companyDetailSection.description && (
+            <div
+              className="mt-2 max-w-2xl text-sm md:text-base lg:text-lg font-light leading-relaxed"
+              style={{
+                color: themeColors.secondaryText,
+                fontFamily: themeFonts.body
+              }}
+            >
+              <TiptapRenderer
+                content={
+                  companyDetailSection.description
+                }
+                className={
+                  TIPTAP_INHERIT
+                }
+              />
             </div>
-         </section>
+          )}
+        </div>
 
-         {/* PHASE 2: SUB-SECTIONS */}
-         <div className="relative z-20 w-full">
-            {details.map((d, idx) => {
-               const imageUrl = getImageSrc(d.image?.url);
-               const title = d.title || d.label;
-               const description = d.description || d.value;
+        {/* Timeline Grid */}
+        <div className="space-y-24 lg:space-y-32">
+          {details.map(
+            (detail, idx) => {
+              const title =
+                detail.title ??
+                detail.label;
 
-               return (
-                  <div key={idx} className="story-journey-part relative w-full">
-                     {/* PINNED IMAGE CONTAINER */}
-                     <section className="story-image-container relative h-screen w-full overflow-hidden">
+              const body =
+                detail.description ??
+                detail.value;
+
+              const imageSrc =
+                getDetailImageSrc(
+                  detail
+                );
+
+              const imageAlt =
+                getDetailImageAlt(
+                  detail,
+                  typeof title ===
+                    'string'
+                    ? title
+                    : `Step ${idx + 1}`
+                );
+
+              const isReverse =
+                idx % 2 !== 0;
+
+              return (
+                <div
+                  key={idx}
+                  ref={(el) => {
+                    stepRefs.current[
+                      idx
+                    ] = el;
+                  }}
+                  className={cn(
+                    'grid items-center gap-12 lg:gap-20',
+                    imageSrc
+                      ? 'lg:grid-cols-2'
+                      : 'max-w-3xl'
+                  )}
+                >
+                  {/* Image Side */}
+                  {imageSrc && (
+                    <div
+                      data-media
+                      className={cn(
+                        'relative',
+                        isReverse
+                          ? 'lg:order-2'
+                          : ''
+                      )}
+                    >
+                      <div
+                        className="absolute -inset-5 rounded-[2rem] opacity-40 blur-3xl"
+                        style={{
+                          background: `radial-gradient(circle, color-mix(in srgb, ${brandColor} 28%, transparent) 0%, transparent 70%)`
+                        }}
+                      />
+
+                      <div
+                        className="relative aspect-[4/5] overflow-hidden border backdrop-blur-xl"
+                        style={{
+                          borderColor: `${themeColors.inactive}20`,
+                          backgroundColor: `${themeColors.cardBackground}60`,
+                          boxShadow: `0 40px 120px color-mix(in srgb, ${sectionBgVar} 65%, transparent)`
+                        }}
+                      >
                         <OptimizedImage
-                           src={imageUrl}
-                           alt={d.image?.altText || ''}
-                           fill
-                           sizes="100vw"
-                           className="object-cover"
+                          src={
+                            imageSrc
+                          }
+                          alt={
+                            imageAlt
+                          }
+                          fill
+                          sizes="(max-width: 1024px) 100vw, 50vw"
+                          className="object-cover transition-transform duration-[1800ms] ease-out hover:scale-105"
                         />
-                        {/* Architectural Overlay UI */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                           <div className="w-20 h-20 rounded-full border border-white/20 backdrop-blur-sm flex items-center justify-center">
-                               <div className="w-1 h-1 bg-white rounded-full shadow-xl" />
-                           </div>
-                           <div className="absolute text-white/40 text-[11px] tracking-[1em] mt-48 uppercase font-light">
-                              Vision 0{idx + 1}
-                           </div>
-                        </div>
-                     </section>
 
-                     {/* TEXT BAR: This slides over the image */}
-                     <section 
-                        className="story-detail-bar relative z-30 py-32 md:py-48 px-8 md:px-16 lg:px-24 w-full" 
-                        style={{ backgroundColor: brandColor }}
-                     >
-                        <div className="max-w-7xl mx-auto">
-                           <div className="flex flex-col gap-12">
-                              <div className="border-l border-white/30 pl-8 md:pl-12">
-                                 <span className="reveal-text block text-[10px] font-bold tracking-[0.6em] uppercase text-white/40 mb-8">
-                                    {d.label || `Part 0${idx + 1}`}
-                                 </span>
-                                 <h3 className="reveal-text text-5xl md:text-7xl lg:text-8xl font-sans font-light uppercase tracking-tighter text-white leading-[0.85]">
-                                    <TiptapRenderer content={title} as="inline" />
-                                 </h3>
-                              </div>
+                        {/* Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
 
-                              <div className="max-w-2xl ml-auto md:mr-12">
-                                 <div className="reveal-text text-white/70 text-lg md:text-2xl font-light leading-relaxed">
-                                    <TiptapRenderer content={description} />
-                                 </div>
-                              </div>
-                           </div>
+                        {/* Floating Number */}
+                        <div
+                          className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center border backdrop-blur-xl"
+                          style={{
+                            borderColor:
+                              'rgba(255,255,255,0.08)',
+                            backgroundColor:
+                              'rgba(0,0,0,0.25)'
+                          }}
+                        >
+                          <span className="text-white text-lg font-light tracking-[0.15em]">
+                            {String(
+                              idx + 1
+                            ).padStart(
+                              2,
+                              '0'
+                            )}
+                          </span>
                         </div>
-                     </section>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Content */}
+                  <div
+                    data-content
+                    className={cn(
+                      'relative',
+                      isReverse
+                        ? 'lg:order-1'
+                        : ''
+                    )}
+                  >
+                    {/* Number */}
+                    <div
+                      className="mb-2 text-[clamp(2.5rem,6vw,6rem)] font-extralight leading-none"
+                      style={{
+                        color: `color-mix(in srgb, ${themeColors.mainText} 14%, transparent)`,
+                        fontFamily:
+                          themeFonts.heading
+                      }}
+                    >
+                      {String(
+                        idx + 1
+                      ).padStart(
+                        2,
+                        '0'
+                      )}
+                    </div>
+
+                    {/* Label */}
+                    <div
+                      className="mb-4 inline-flex items-center gap-3"
+                    >
+                      <div
+                        className="w-10 h-px"
+                        style={{
+                          backgroundColor:
+                            brandColor
+                        }}
+                      />
+
+                      <span
+                        className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+                        style={{
+                          color: themeColors.secondaryText,
+                          fontFamily: themeFonts.body
+                        }}
+                      >
+                        {detail.label ||
+                          `Step ${idx + 1}`}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    {title && (
+                      <h3
+                        className="max-w-xl text-3xl md:text-5xl font-extralight uppercase leading-[1] tracking-[-0.03em]"
+                        style={{
+                          color:
+                            themeColors.mainText,
+                          fontFamily:
+                            themeFonts.heading
+                        }}
+                      >
+                        <TiptapRenderer
+                          content={
+                            title
+                          }
+                          as="inline"
+                          className={
+                            TIPTAP_INHERIT
+                          }
+                        />
+                      </h3>
+                    )}
+
+                    {/* Body */}
+                    {body && (
+                      <div
+                        className="mt-7 max-w-xl text-sm md:text-base lg:text-lg font-light leading-relaxed"
+                        style={{
+                          color: themeColors.secondaryText,
+                          fontFamily: themeFonts.body
+                        }}
+                      >
+                        <TiptapRenderer
+                          content={
+                            body
+                          }
+                          className={
+                            TIPTAP_INHERIT
+                          }
+                        />
+                      </div>
+                    )}
+
+                    {/* CTA */}
+                    <div className="mt-10 flex items-center gap-4">
+                      <div
+                        className="w-14 h-[1px]"
+                        style={{
+                          backgroundColor:
+                            brandColor
+                        }}
+                      />
+
+                      <div
+                        className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.35em] font-semibold"
+                        style={{
+                          color: brandColor,
+                          fontFamily: themeFonts.body
+                        }}
+                      >
+                        Explore
+
+                        <ArrowUpRight
+                          size={14}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Decorative Card */}
+                    <div
+                      className="mt-12 inline-flex items-center gap-4 border px-5 py-4 backdrop-blur-xl"
+                      style={{
+                        borderColor: `${themeColors.inactive}20`,
+                        backgroundColor: `${themeColors.cardBackground}55`
+                      }}
+                    >
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${brandColor} 16%, transparent)`
+                        }}
+                      >
+                        <Sparkles
+                          size={16}
+                          style={{
+                            color:
+                              brandColor
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <p
+                          className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                          style={{
+                            color: themeColors.secondaryText,
+                            fontFamily: themeFonts.body
+                          }}
+                        >
+                          Premium Detail
+                        </p>
+
+                        <p
+                          className="mt-1 text-sm font-light"
+                          style={{
+                            color: themeColors.mainText,
+                            fontFamily: themeFonts.body
+                          }}
+                        >
+                          Crafted with
+                          precision &
+                          modern design
+                        </p>
+                      </div>
+                    </div>
                   </div>
-               );
-            })}
-         </div>
+                </div>
+              );
+            }
+          )}
+        </div>
       </div>
-   );
+    </section>
+  );
 };
 
 export default CompanyDetailSection;

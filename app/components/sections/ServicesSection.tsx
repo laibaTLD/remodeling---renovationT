@@ -1,12 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Page } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
-import { getImageSrc, cn } from '@/app/lib/utils';
-import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
+import { cn, getImageSrc } from '@/app/lib/utils';
 import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
 
@@ -15,130 +13,236 @@ interface ServicesSectionProps {
   className?: string;
 }
 
+function resolveServiceImageRaw(service: any): string | undefined {
+  const thumb = service?.thumbnailImage;
+  if (typeof thumb === 'string' && thumb.trim()) return thumb;
+  if (thumb?.url) return thumb.url;
+
+  const image = service?.image;
+  if (typeof image === 'string' && image.trim()) return image;
+  if (image && typeof image === 'object' && image.url) return image.url;
+
+  const bannerBg = service?.banner?.backgroundImage;
+  if (bannerBg?.url) return bannerBg.url;
+
+  const gallery = service?.galleryImages;
+  if (Array.isArray(gallery) && gallery.length > 0) {
+    const first = gallery[0] as { url?: string; imageUrl?: string };
+    if (first?.url) return first.url;
+    if (first?.imageUrl) return first.imageUrl;
+  }
+
+  return undefined;
+}
+
+function getServiceImageSrc(service: any): string {
+  const raw = resolveServiceImageRaw(service);
+  return raw ? getImageSrc(raw) : '';
+}
+
+function getServiceImageAlt(service: any): string {
+  const thumb = service?.thumbnailImage;
+  if (thumb && typeof thumb === 'object' && thumb.altText) return thumb.altText;
+  const gallery = service?.galleryImages?.[0];
+  if (gallery?.altText) return gallery.altText;
+  return service?.name || '';
+}
+
 export const ServicesSection: React.FC<ServicesSectionProps> = ({ servicesSection, className }) => {
-  const { services } = useWebBuilder();
+  const { services, loading, site } = useWebBuilder();
+  const [activeIndex, setActiveIndex] = useState<number>(0);
+
   const themeColors = useThemeColors();
   const themeFonts = useThemeFonts();
 
+  const displayServices = React.useMemo(() => {
+    const all = services ?? [];
+    const ids = servicesSection?.serviceIds;
+    if (ids?.length) {
+      return ids
+        .map((id) => all.find((s) => s._id === id))
+        .filter((s): s is (typeof all)[number] => Boolean(s));
+    }
+    return all;
+  }, [services, servicesSection?.serviceIds]);
+
   if (!servicesSection?.enabled) return null;
 
-  const showcase = [
-    'Kitchen Remodeling',
-    'Bathroom Renovation',
-    'Roofing',
-    'Fire Restoration',
-    'Water Damage Restoration',
-    'Exterior Remodeling',
-    'Interior Renovation',
-    'Flooring',
-    'Painting',
-    'Full Home Remodeling',
-  ];
+  if (loading && displayServices.length === 0) {
+    return (
+      <section
+        className={cn('py-24 lg:py-32', className)}
+        style={{ backgroundColor: themeColors.sectionBackground }}
+      >
+        <div className="container mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-16">
+            <div className="h-48 rounded-2xl animate-pulse" style={{ backgroundColor: themeColors.cardBackground }} />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 rounded-xl animate-pulse" style={{ backgroundColor: themeColors.cardBackground }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-  const list = services.length > 0 ? services : null;
-
-  const brandColor = themeColors.primaryButton;
+  const activeService = displayServices[activeIndex] || displayServices[0];
 
   return (
     <section
-      className={cn('relative border-t border-white/5 py-16 md:py-24 lg:py-28 text-white', className)}
-      style={{ background: 'linear-gradient(180deg, #050508 0%, #0a0a12 55%, #050508 100%)' }}
+      className={cn('relative min-h-screen py-20 lg:py-32 flex items-center overflow-hidden', className)}
+      style={{
+        backgroundColor: themeColors.sectionBackground,
+        fontFamily: themeFonts.body
+      }}
     >
-      <div className="container mx-auto px-6 md:px-12 lg:px-20">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-start">
+      <div className="container mx-auto px-6 lg:px-12 w-full asset-grid">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-20 items-start">
+          
+          {/* LEFT SIDE COLUMN: Global Headings & Current Selection Information */}
+          <div className="lg:col-span-5 space-y-10 lg:sticky lg:top-24">
+            <div className="space-y-4">
+              {site?.business?.tagline && (
+                <span
+                  className="inline-block text-xs uppercase tracking-[0.4em] font-semibold"
+                  style={{ color: themeColors.primaryButton, fontFamily: themeFonts.body }}
+                >
+                  [{site.business.tagline}]
+                </span>
+              )}
+              
+              {servicesSection.title && (
+                <div
+                  className="text-4xl md:text-5xl lg:text-6xl font-normal leading-[1.05] tracking-tight"
+                  style={{ color: themeColors.mainText, fontFamily: themeFonts.heading }}
+                >
+                  <TiptapRenderer content={servicesSection.title} />
+                </div>
+              )}
 
-          {/* LEFT SIDE: STICKY HEADER & NAV */}
-          <div className="lg:col-span-5 lg:sticky lg:top-32 space-y-12">
-            <div className="space-y-6">
-              <h2
-                className="max-w-[18ch] text-balance text-3xl font-extralight uppercase leading-[1.02] tracking-[0.12em] text-white md:text-4xl lg:text-5xl"
-                style={{ fontFamily: themeFonts.heading }}
-              >
-                <TiptapRenderer content={servicesSection.title} as="inline" />
-              </h2>
-
-              <div className="max-w-xs text-[11px] uppercase leading-relaxed tracking-[0.35em] text-white/55 md:text-xs">
-                <TiptapRenderer content={servicesSection.description} />
-              </div>
+              {servicesSection.description && (
+                <div
+                  className="text-sm md:text-base leading-relaxed opacity-80 font-light max-w-md"
+                  style={{ color: themeColors.secondaryText, fontFamily: themeFonts.body }}
+                >
+                  <TiptapRenderer content={servicesSection.description} />
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* RIGHT SIDE: SCROLLABLE EDITORIAL GRID */}
-          <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-16 lg:pt-4">
-            {list
-              ? list.map((service, idx) => {
-                  const imageUrl = getImageSrc(service.thumbnailImage?.url || service.thumbnailImage);
+            {/* Current Active Service Focus Area */}
+            {activeService && (
+              <div className="pt-8 border-t transition-all duration-500 space-y-6" style={{ borderColor: `${themeColors.mainText}15` }}>
+                {/* Dynamically Loaded Image Placed Before Title/Description */}
+                {getServiceImageSrc(activeService) && (
+                  <div className="w-full aspect-[16/9] rounded-sm overflow-hidden mb-4 relative group">
+                    <img
+                      src={getServiceImageSrc(activeService)}
+                      alt={getServiceImageAlt(activeService)}
+                      className="w-full h-full object-cover object-center transition-transform duration-700 ease-out scale-100 group-hover:scale-105"
+                    />
+                  </div>
+                )}
 
-                  return (
-                    <motion.div
-                      key={service._id}
-                      initial={{ opacity: 0, y: 40 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, amount: 0.2 }}
-                      transition={{ duration: 0.65, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                      <Link href={`/service/${service.slug}`} className="group flex flex-col gap-8">
-                        <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-transform duration-500 group-hover:-translate-y-1">
-                          <OptimizedImage
-                            src={imageUrl}
-                            alt={service.name}
-                            fill
-                            sizes="(max-width: 1024px) 100vw, 35vw"
-                            className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-105"
-                          />
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-80" />
-                        </div>
-
-                        <div className="space-y-5">
-                          <div className="flex items-center gap-4">
-                            <span className="text-[9px] font-medium uppercase tracking-widest text-white/35">
-                              {new Date(service.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()}
-                            </span>
-                          </div>
-
-                          <h3
-                            className="text-2xl font-light uppercase leading-tight tracking-[0.06em] text-white transition-opacity duration-300 group-hover:text-[color:var(--wb-primary)] md:text-3xl"
-                            style={{ fontFamily: themeFonts.heading }}
-                          >
-                            {service.name}
-                          </h3>
-
-                          <div className="line-clamp-3 text-xs font-light leading-relaxed tracking-wide text-white/50 md:text-sm">
-                            {typeof service.shortDescription === 'string' ? (
-                              service.shortDescription
-                            ) : (
-                              service.shortDescription && <TiptapRenderer content={service.shortDescription} />
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-3 pt-1">
-                            <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: brandColor }}>
-                              Explore
-                            </span>
-                            <div className="h-[1px] w-8 transition-all group-hover:w-14" style={{ backgroundColor: brandColor }} />
-                          </div>
-                        </div>
-                      </Link>
-                    </motion.div>
-                  );
-                })
-              : showcase.map((name, idx) => (
-                  <motion.div
-                    key={name}
-                    initial={{ opacity: 0, y: 36 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.2 }}
-                    transition={{ duration: 0.6, delay: idx * 0.05 }}
-                    className="group flex flex-col gap-6 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-transparent p-6 backdrop-blur-xl transition-colors hover:border-[color:var(--wb-primary)]/40"
+                <div className="space-y-3">
+                  <h4 
+                    className="text-xl font-medium tracking-wide uppercase"
+                    style={{ color: themeColors.mainText, fontFamily: themeFonts.heading }}
                   >
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/35">Signature</div>
-                    <h3 className="text-xl font-light uppercase tracking-[0.08em] text-white md:text-2xl" style={{ fontFamily: themeFonts.heading }}>
-                      {name}
-                    </h3>
-                    <p className="text-xs font-light leading-relaxed text-white/45">Configure this service in your builder to link detail pages.</p>
-                  </motion.div>
-                ))}
+                    {activeService.name}
+                  </h4>
+                  
+                  {activeService.shortDescription && (
+                    <div 
+                      className="text-sm leading-relaxed font-light"
+                      style={{ color: themeColors.secondaryText }}
+                    >
+                      {typeof activeService.shortDescription === 'string' ? (
+                        activeService.shortDescription
+                      ) : (
+                        <TiptapRenderer content={activeService.shortDescription} />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Link
+                    href={`/service/${activeService.slug}`}
+                    className="inline-flex items-center justify-between w-full sm:w-auto gap-12 px-6 py-3 border text-xs uppercase tracking-[0.25em] font-medium transition-all duration-300 rounded-sm hover:opacity-90"
+                    style={{
+                      backgroundColor: themeColors.primaryButton,
+                      color: themeColors.sectionBackground,
+                      borderColor: themeColors.primaryButton
+                    }}
+                  >
+                    <span>Learn more</span>
+                    <span>→</span>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* RIGHT SIDE COLUMN: Interactive Service Scroller Strip */}
+          <div className="lg:col-span-7 w-full border-t" style={{ borderColor: `${themeColors.mainText}20` }}>
+            {displayServices.map((service, index: number) => {
+              const isSelected = activeIndex === index;
+              
+              return (
+                <div
+                  key={service._id}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => setActiveIndex(index)}
+                  className="group relative cursor-pointer border-b transition-all duration-300 py-10 lg:py-14 grid grid-cols-12 gap-4 items-center"
+                  style={{ borderColor: `${themeColors.mainText}20` }}
+                >
+                  {/* Service Text Metadata Block */}
+                  <div className="col-span-8 space-y-2">
+                    <h3
+                      className="text-sm lg:text-base uppercase font-semibold tracking-widest transition-colors duration-300"
+                      style={{ 
+                        color: isSelected ? themeColors.mainText : themeColors.secondaryText,
+                        fontFamily: themeFonts.heading 
+                      }}
+                    >
+                      {service.name}
+                    </h3>
+                    
+                    {service.shortDescription && (
+                      <p 
+                        className="text-xs max-w-md line-clamp-2 transition-opacity duration-300"
+                        style={{ 
+                          color: themeColors.secondaryText,
+                          opacity: isSelected ? 1 : 0.5 
+                        }}
+                      >
+                        {typeof service.shortDescription === 'string' 
+                          ? service.shortDescription 
+                          : 'Explore campaign parameters and conversions.'}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Huge Counter Indicator Row */}
+                  <div className="col-span-4 text-right select-none">
+                    <span
+                      className="text-6xl md:text-7xl lg:text-8xl font-light tracking-tighter leading-none block transition-all duration-500 transform font-sans"
+                      style={{
+                        color: isSelected ? themeColors.mainText : themeColors.secondaryText,
+                        opacity: isSelected ? 1 : 0.15,
+                      }}
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
         </div>
       </div>
     </section>

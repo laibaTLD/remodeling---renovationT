@@ -1,207 +1,371 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Page } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
 import { cn } from '@/app/lib/utils';
 import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
-import { ArrowLeft, ArrowRight, Quote } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Quote } from 'lucide-react';
 
 interface TestimonialsSectionProps {
-    testimonialsSection: Page['testimonialsSection'];
-    className?: string;
+  testimonialsSection: Page['testimonialsSection'];
+  className?: string;
 }
 
-export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonialsSection, className }) => {
-    const trackRef = useRef<HTMLDivElement | null>(null);
-    const [activeIndex, setActiveIndex] = useState(0);
+export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({
+  testimonialsSection,
+  className,
+}) => {
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-    const themeColors = useThemeColors();
-    const themeFonts = useThemeFonts();
+  const themeColors = useThemeColors();
+  const themeFonts = useThemeFonts();
 
-    const items = testimonialsSection?.testimonials || [];
+  const items = useMemo(
+    () => testimonialsSection?.testimonials?.filter(Boolean) || [],
+    [testimonialsSection?.testimonials]
+  );
 
-    const scrollToIndex = (idx: number) => {
-        const track = trackRef.current;
-        if (!track) return;
-        const target = track.querySelector<HTMLElement>(`[data-testimonial-index="${idx}"]`);
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }
-    };
+  const brandColor =
+    themeColors.primaryButton ||
+    themeColors.mainText ||
+    themeColors.lightPrimaryText;
 
-    const scrollByCard = (direction: -1 | 1) => {
-        const next = Math.max(0, Math.min(items.length - 1, activeIndex + direction));
-        scrollToIndex(next);
-    };
+  const scrollToIndex = (idx: number) => {
+    const track = trackRef.current;
+    if (!track) return;
 
-    useEffect(() => {
-        const track = trackRef.current;
-        if (!track || items.length === 0) return;
-
-        const handler = () => {
-            const children = Array.from(track.querySelectorAll<HTMLElement>('[data-testimonial-index]'));
-            const trackRect = track.getBoundingClientRect();
-            const trackCenterX = trackRect.left + trackRect.width / 2;
-
-            let bestIdx = 0;
-            let bestDist = Number.POSITIVE_INFINITY;
-            children.forEach((el) => {
-                const rect = el.getBoundingClientRect();
-                const elCenterX = rect.left + rect.width / 2;
-                const dist = Math.abs(elCenterX - trackCenterX);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestIdx = Number(el.dataset.testimonialIndex || 0);
-                }
-            });
-            setActiveIndex(bestIdx);
-        };
-
-        track.addEventListener('scroll', handler, { passive: true });
-        return () => track.removeEventListener('scroll', handler as any);
-    }, [items.length]);
-
-    if (!testimonialsSection?.enabled) return null;
-
-    return (
-        <section
-            className={cn('relative py-24 lg:py-32 overflow-hidden', className)}
-            style={{ backgroundColor: themeColors.sectionBackground }}
-        >
-            <div className="container mx-auto px-6">
-                
-                {/* Section Header */}
-                <div className="mb-12 flex flex-col items-center text-center">
-                    <div className="mb-6 flex items-center gap-3">
-                        {testimonialsSection.description && (
-                            <span 
-                                className="text-[10px] tracking-[0.4em] uppercase font-bold"
-                                style={{ 
-                                    color: themeColors.primaryButton,
-                                    fontFamily: themeFonts.body
-                                }}
-                            >
-                                <TiptapRenderer content={testimonialsSection.description} as="inline" />
-                            </span>
-                        )}
-                        <div className="w-12 h-[1px]" style={{ backgroundColor: `${themeColors.primaryButton}40` }} />
-                    </div>
-                    
-                    {testimonialsSection.title && (
-                        <h2
-                            className="text-3xl lg:text-4xl leading-tight max-w-3xl"
-                            style={{ 
-                                color: themeColors.lightPrimaryText,
-                                fontFamily: themeFonts.heading
-                            }}
-                        >
-                            <TiptapRenderer content={testimonialsSection.title} />
-                        </h2>
-                    )}
-                </div>
-
-                {/* Main Carousel Display */}
-                <div className="relative mt-16">
-                    <div
-                        ref={trackRef}
-                        className="flex gap-12 lg:gap-24 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-12 items-center"
-                        style={{ scrollbarWidth: 'none' }}
-                    >
-                        {items.map((t, idx) => {
-                            return (
-                            <div
-                                key={`${t.name}-${idx}`}
-                                data-testimonial-index={idx}
-                                className={cn(
-                                    "min-w-full md:min-w-[70%] lg:min-w-[60%] snap-center transition-all duration-700 ease-out",
-                                    activeIndex === idx ? "opacity-100 scale-100" : "opacity-30 scale-95 grayscale"
-                                )}
-                            >
-                                <div className="flex flex-col items-center text-center">
-                                    <Quote 
-                                        className="w-12 h-12 mb-10 opacity-20" 
-                                        style={{ color: themeColors.primaryButton }} 
-                                    />
-                                    
-                                    <div
-                                        className="text-xl md:text-2xl lg:text-3xl italic leading-relaxed mb-12"
-                                        style={{ 
-                                            color: themeColors.lightPrimaryText,
-                                            fontFamily: themeFonts.body
-                                        }}
-                                    >
-                                        <TiptapRenderer content={t.text} />
-                                    </div>
-
-                                    <div className="flex flex-col items-center">
-                                        <span 
-                                            className="text-xs tracking-[0.3em] uppercase font-black mb-2"
-                                            style={{ 
-                                                color: themeColors.primaryButton,
-                                                fontFamily: themeFonts.heading
-                                            }}
-                                        >
-                                            {t.name}
-                                        </span>
-                                        <span 
-                                            className="text-[10px] tracking-widest opacity-60 uppercase"
-                                            style={{ 
-                                                color: themeColors.lightSecondaryText,
-                                                fontFamily: themeFonts.body
-                                            }}
-                                        >
-                                            {t.role} {t.company && `• ${t.company}`}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Minimalist Controls */}
-                    <div className="mt-12 flex flex-col items-center gap-8">
-                        {/* Progress Line */}
-                        <div className="flex gap-3 h-[2px] w-32 md:w-48 bg-black/5 relative">
-                            <div 
-                                className="absolute top-0 left-0 h-full transition-all duration-500"
-                                style={{ 
-                                    backgroundColor: themeColors.primaryButton,
-                                    width: `${((activeIndex + 1) / items.length) * 100}%` 
-                                }}
-                            />
-                        </div>
-
-                        <div className="flex items-center gap-12">
-                            <button
-                                onClick={() => scrollByCard(-1)}
-                                className="group flex items-center gap-2 transition-all"
-                                style={{ color: themeColors.lightPrimaryText }}
-                            >
-                                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                                <span className="text-[10px] tracking-[0.2em] font-bold uppercase">Prev</span>
-                            </button>
-                            
-                            <span className="text-[10px] tracking-[0.2em] font-bold opacity-30">
-                                {String(activeIndex + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
-                            </span>
-
-                            <button
-                                onClick={() => scrollByCard(1)}
-                                className="group flex items-center gap-2 transition-all"
-                                style={{ color: themeColors.lightPrimaryText }}
-                            >
-                                <span className="text-[10px] tracking-[0.2em] font-bold uppercase">Next</span>
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Decorative Heritage Line */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1px] h-24 bg-gradient-to-t from-transparent via-black/10 to-transparent" />
-        </section>
+    const target = track.querySelector<HTMLElement>(
+      `[data-testimonial-index="${idx}"]`
     );
+
+    if (target) {
+      target.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+    }
+  };
+
+  const scrollByCard = (direction: -1 | 1) => {
+    const next = Math.max(
+      0,
+      Math.min(items.length - 1, activeIndex + direction)
+    );
+
+    scrollToIndex(next);
+  };
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || items.length === 0) return;
+
+    const handler = () => {
+      const cards = Array.from(
+        track.querySelectorAll<HTMLElement>('[data-testimonial-index]')
+      );
+
+      const trackRect = track.getBoundingClientRect();
+      const center = trackRect.left + trackRect.width / 2;
+
+      let closest = 0;
+      let distance = Infinity;
+
+      cards.forEach((card) => {
+        const rect = card.getBoundingClientRect();
+        const cardCenter = rect.left + rect.width / 2;
+        const diff = Math.abs(cardCenter - center);
+
+        if (diff < distance) {
+          distance = diff;
+          closest = Number(card.dataset.testimonialIndex || 0);
+        }
+      });
+
+      setActiveIndex(closest);
+    };
+
+    handler();
+
+    track.addEventListener('scroll', handler, { passive: true });
+
+    return () => {
+      track.removeEventListener('scroll', handler);
+    };
+  }, [items.length]);
+
+  if (!testimonialsSection?.enabled || items.length === 0) return null;
+
+  return (
+    <section
+      className={cn(
+        'relative overflow-hidden py-16',
+        className
+      )}
+      style={{
+        backgroundColor: themeColors.pageBackground,
+        fontFamily: themeFonts.body,
+      }}
+    >
+      {/* Ambient Background */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, ${themeColors.mainText} 1px, transparent 1px),
+            linear-gradient(to bottom, ${themeColors.mainText} 1px, transparent 1px)
+          `,
+          backgroundSize: '120px 120px',
+        }}
+      />
+
+      <div
+        className="pointer-events-none absolute left-0 top-0 h-[500px] w-[500px] rounded-full blur-[140px]"
+        style={{
+          background: `color-mix(in srgb, ${brandColor} 18%, transparent)`,
+        }}
+      />
+
+      <div className="relative z-10 container mx-auto px-8">
+        {/* Header */}
+        <div className="mb-10 flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div
+              className="mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.32em] backdrop-blur-xl"
+              style={{
+                borderColor: `color-mix(in srgb, ${brandColor} 18%, transparent)`,
+                backgroundColor: `color-mix(in srgb, ${brandColor} 6%, transparent)`,
+                color: brandColor,
+              }}
+            >
+              <Sparkles size={12} />
+              Client Stories
+            </div>
+
+            {testimonialsSection.title && (
+              <h2
+                className="text-balance text-[clamp(2.5rem,6vw,6rem)] font-extralight uppercase leading-[0.95] tracking-[0.08em]"
+                style={{
+                  color: themeColors.mainText,
+                  fontFamily: themeFonts.heading,
+                }}
+              >
+                <TiptapRenderer
+                  content={testimonialsSection.title}
+                  as="inline"
+                />
+              </h2>
+            )}
+
+            {testimonialsSection.description && (
+              <div
+                className="mt-6 max-w-xl text-sm font-light leading-relaxed tracking-wide md:text-base"
+                style={{
+                  color: themeColors.secondaryText,
+                  fontFamily: themeFonts.body,
+                }}
+              >
+                <TiptapRenderer content={testimonialsSection.description} />
+              </div>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-5">
+            <button
+              type="button"
+              onClick={() => scrollByCard(-1)}
+              className="group flex h-14 w-14 items-center justify-center rounded-full border transition-all duration-500 hover:-translate-x-1"
+              style={{
+                borderColor: `color-mix(in srgb, ${themeColors.mainText} 10%, transparent)`,
+                backgroundColor: `color-mix(in srgb, ${themeColors.cardBackground} 72%, transparent)`,
+              }}
+            >
+              <ArrowLeft
+                size={18}
+                className="transition-transform duration-300 group-hover:-translate-x-1"
+                style={{ color: themeColors.mainText }}
+              />
+            </button>
+
+            <div
+              className="min-w-[90px] text-center text-xs font-medium tracking-[0.3em]"
+              style={{ color: themeColors.secondaryText }}
+            >
+              <span style={{ color: themeColors.mainText }}>
+                {String(activeIndex + 1).padStart(2, '0')}
+              </span>
+              <span className="mx-2 opacity-30">/</span>
+              <span className="opacity-60">
+                {String(items.length).padStart(2, '0')}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => scrollByCard(1)}
+              className="group flex h-14 w-14 items-center justify-center rounded-full border transition-all duration-500 hover:translate-x-1"
+              style={{
+                borderColor: `color-mix(in srgb, ${themeColors.mainText} 10%, transparent)`,
+                backgroundColor: `color-mix(in srgb, ${themeColors.cardBackground} 72%, transparent)`,
+              }}
+            >
+              <ArrowRight
+                size={18}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+                style={{ color: themeColors.mainText }}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Cards */}
+        <div
+          ref={trackRef}
+          className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4 no-scrollbar md:gap-8"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
+          {items.map((testimonial, idx) => {
+            const isActive = idx === activeIndex;
+
+            return (
+              <article
+                key={`${testimonial.name}-${idx}`}
+                data-testimonial-index={idx}
+                className={cn(
+                  'group relative min-w-[92%] snap-center overflow-hidden rounded-[2rem] border transition-all duration-700 md:min-w-[70%] xl:min-w-[58%]',
+                  isActive
+                    ? 'scale-100 opacity-100'
+                    : 'scale-[0.96] opacity-40'
+                )}
+                style={{
+                  backgroundColor: themeColors.cardBackground,
+                  borderColor: isActive
+                    ? `color-mix(in srgb, ${brandColor} 20%, transparent)`
+                    : `color-mix(in srgb, ${themeColors.mainText} 8%, transparent)`,
+                  boxShadow: isActive
+                    ? `0 40px 120px -60px ${brandColor}`
+                    : 'none',
+                }}
+              >
+                {/* Decorative Glow */}
+                <div
+                  className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-[100px]"
+                  style={{
+                    background: `color-mix(in srgb, ${brandColor} 18%, transparent)`,
+                    opacity: isActive ? 1 : 0,
+                    transition: 'opacity 600ms ease',
+                  }}
+                />
+
+                <div className="relative flex h-full flex-col justify-between p-8 md:p-12 lg:p-14">
+                  {/* Top */}
+                  <div>
+                    <div className="mb-10 flex items-center justify-between">
+                      <div
+                        className="flex h-14 w-14 items-center justify-center rounded-full border backdrop-blur-xl"
+                        style={{
+                          borderColor: `color-mix(in srgb, ${brandColor} 18%, transparent)`,
+                          backgroundColor: `color-mix(in srgb, ${brandColor} 8%, transparent)`,
+                        }}
+                      >
+                        <Quote
+                          size={22}
+                          style={{ color: brandColor }}
+                          strokeWidth={1.5}
+                        />
+                      </div>
+
+                      <div
+                        className="text-[10px] font-semibold uppercase tracking-[0.35em]"
+                        style={{
+                          color: themeColors.secondaryText,
+                        }}
+                      >
+                        Testimonial
+                      </div>
+                    </div>
+
+                    {/* Text */}
+                    <div
+                      className="text-xl leading-[1.8] md:text-2xl lg:text-[1.75rem]"
+                      style={{
+                        color: themeColors.mainText,
+                        fontFamily: themeFonts.body,
+                        fontWeight: 300,
+                      }}
+                    >
+                      <TiptapRenderer content={testimonial.text} />
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div
+                    className="mt-14 flex items-end justify-between gap-6 border-t pt-8"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${themeColors.mainText} 8%, transparent)`,
+                    }}
+                  >
+                    <div>
+                      <h4
+                        className="text-sm uppercase tracking-[0.28em]"
+                        style={{
+                          color: brandColor,
+                          fontFamily: themeFonts.heading,
+                        }}
+                      >
+                        {testimonial.name}
+                      </h4>
+
+                      {(testimonial.role || testimonial.company) && (
+                        <p
+                          className="mt-2 text-xs uppercase tracking-[0.18em]"
+                          style={{
+                            color: themeColors.secondaryText,
+                          }}
+                        >
+                          {testimonial.role}
+                          {testimonial.role && testimonial.company && (
+                            <span className="mx-2 opacity-40">•</span>
+                          )}
+                          {testimonial.company}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Active Dot */}
+                    <div className="flex items-center gap-2">
+                      {items.map((_, dotIdx) => (
+                        <button
+                          key={dotIdx}
+                          type="button"
+                          aria-label={`Go to testimonial ${dotIdx + 1}`}
+                          onClick={() => scrollToIndex(dotIdx)}
+                          className="h-2 rounded-full transition-all duration-500"
+                          style={{
+                            width: activeIndex === dotIdx ? '40px' : '8px',
+                            backgroundColor:
+                              activeIndex === dotIdx
+                                ? brandColor
+                                : `color-mix(in srgb, ${themeColors.mainText} 16%, transparent)`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
 };
+
+export default TestimonialsSection;

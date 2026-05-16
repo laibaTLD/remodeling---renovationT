@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Page } from '@/app/lib/types';
+import { Page, Project } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
 import { cn, getImageSrc } from '@/app/lib/utils';
 import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
-import { useThemeColors } from '@/app/hooks/useTheme';
+import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
+import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
@@ -20,142 +21,222 @@ interface ProjectsSectionProps {
   className?: string;
 }
 
-export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projectsSection, className }) => {
-  const themeColors = useThemeColors();
-  const { projects } = useWebBuilder();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+type ManualProject = NonNullable<NonNullable<Page['projectsSection']>['projects']>[number];
+type DisplayItem = Project | ManualProject;
 
-  useEffect(() => {
-    if (!projectsSection?.enabled) return;
+function isProjectEntity(p: DisplayItem): p is Project {
+  return typeof (p as Project)._id === 'string' && typeof (p as Project).slug === 'string';
+}
 
-    const ctx = gsap.context(() => {
-      // Horizontal Scroll Animation
-      if (scrollRef.current && containerRef.current) {
-        const scrollWidth = Math.max(containerRef.current.scrollWidth - window.innerWidth, 0);
+function projectHref(p: DisplayItem): string {
+  if (isProjectEntity(p)) return `/project-detail/${p.slug}`;
+  const href = (p as ManualProject).href;
+  return typeof href === 'string' && href.length > 0 ? href : '#';
+}
 
-        if (scrollWidth <= 0) return;
+function projectTitle(p: DisplayItem): React.ReactNode {
+  if (isProjectEntity(p)) return p.title;
+  const t = (p as ManualProject).title;
+  if (typeof t === 'string') return t;
+  if (t) return <TiptapRenderer content={t} as="inline" />;
+  return 'Project';
+}
 
-        gsap.to(containerRef.current, {
-          x: -scrollWidth,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: scrollRef.current,
-            start: 'top top',
-            end: () => `+=${scrollWidth}`,
-            scrub: 1,
-            pin: true,
-            invalidateOnRefresh: true,
-          }
-        });
-      }
-    }, scrollRef);
+function projectImageUrl(p: DisplayItem): string | null {
+  if (isProjectEntity(p)) {
+    return getImageSrc(p.featuredImage?.url || p.featuredImage);
+  }
+  const img = (p as ManualProject).image;
+  return img?.url ? getImageSrc(img.url) : null;
+}
 
-    return () => ctx.revert();
-  }, [projectsSection, projects]);
+interface ProjectSlideProps {
+  item: DisplayItem;
+  index: number;
+  brandColor: string;
+  fonts: { heading?: string; body?: string };
+  themeColors: any;
+}
 
-  if (!projectsSection?.enabled) return null;
+const ProjectSlide: React.FC<ProjectSlideProps> = ({ item, index, brandColor, fonts, themeColors }) => {
+  const imageUrl = projectImageUrl(item);
+  const href = projectHref(item);
+  const title = projectTitle(item);
+  const [hovered, setHovered] = useState(false);
 
-  const brandColor = themeColors.primaryButton;
-
-  // Get projects from provider or manual selection
-  const publishedProjects = (projects || []).filter((p) => p.status === 'published');
-  const displayItems = projectsSection.projects?.length ? projectsSection.projects : publishedProjects;
+  const viewControl =
+    href === '#' ? (
+      <div className="group/link relative flex h-16 w-16 items-center justify-center rounded-full border" style={{ borderColor: `${themeColors.mainText}20` }}>
+        <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest" style={{ color: themeColors.mainText }}>View</span>
+      </div>
+    ) : (
+      <Link
+        href={href}
+        className="group/link relative flex h-16 w-16 items-center justify-center rounded-full border transition-all duration-500 hover:scale-110"
+        style={{ borderColor: `${themeColors.mainText}20` }}
+      >
+        <div
+          className="absolute inset-0 scale-0 rounded-full transition-transform duration-500 group-hover/link:scale-100"
+          style={{ backgroundColor: brandColor }}
+        />
+        <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest" style={{ color: themeColors.mainText }}>View</span>
+      </Link>
+    );
 
   return (
     <div
-      ref={scrollRef}
-      className="relative overflow-x-clip overflow-y-hidden max-w-full"
-      style={{ backgroundColor: brandColor }}
+      className="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden lg:flex-row"
+      style={{ backgroundColor: themeColors.cardBackground }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* Hide horizontal scrollbar across all browsers */}
-      <style jsx global>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-      <section className={cn('relative min-h-screen flex flex-col justify-center overflow-x-clip overflow-y-hidden', className)}>
-        <div className="px-8 md:px-16 lg:px-24 mb-12">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-10 h-[1.5px] bg-white/40" />
-            <span className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/60">
-              Featured Projects
-            </span>
-          </div>
-          {projectsSection.title && (
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-sans tracking-tight uppercase font-light text-white leading-none max-w-2xl">
-              <TiptapRenderer content={projectsSection.title} as="inline" />
-            </h2>
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div
+          data-project-bg
+          className="absolute inset-0 h-full w-full scale-110 opacity-60 transition-transform duration-1000 ease-out group-hover:scale-100"
+        >
+          {imageUrl && (
+            <OptimizedImage
+              src={imageUrl}
+              alt={typeof title === 'string' ? title : 'Project'}
+              fill
+              className="object-cover"
+              sizes="100vw"
+              priority={index < 2}
+            />
           )}
         </div>
+        <div className="absolute inset-0 z-10 opacity-80" style={{ background: `linear-gradient(to top, ${themeColors.cardBackground}, ${themeColors.cardBackground}20, transparent)` }} />
+        <div
+          className="absolute inset-0 z-10 transition-opacity duration-700"
+          style={{
+            background: `radial-gradient(circle at center, ${brandColor} 0%, transparent 70%)`,
+            opacity: hovered ? 0.4 : 0.2,
+          }}
+        />
+      </div>
 
-        {/* Horizontal Scrolling Projects Container */}
-        <div className="relative w-full max-w-full overflow-x-clip overflow-y-visible scrollbar-hide">
-          <div
-            ref={containerRef}
-            className="flex gap-6 md:gap-10 lg:gap-14 px-6 md:px-16 lg:px-24 w-max max-w-full"
-          >
-            {displayItems.map((item: any, idx) => {
-              const imageUrl = getImageSrc(item.featuredImage?.url || item.image?.url || item.image || item.featuredImage);
-              const titleText = item.name || item.title || 'Project';
-              const locationText = item.location || 'Madrid';
+      <div className="relative z-20 flex flex-col items-center px-6 text-center lg:px-20">
+        <span
+          className="mb-6 block text-[10px] font-black uppercase tracking-[0.6em]"
+          style={{ color: brandColor }}
+        >
+          Project {String(index + 1).padStart(2, '0')}
+        </span>
 
-              return (
-                <Link
-                  key={idx}
-                  href={`/projects/${item.slug || 'detail'}`}
-                  className="group flex flex-col w-[82vw] max-w-[280px] md:w-[320px] lg:w-[360px] shrink-0"
-                >
-                  {/* The Card Image Area - Reduced Size & Tighter Aspect Ratio */}
-                  <div className="relative aspect-[4/5] overflow-hidden bg-white/5 mb-6">
-                    {imageUrl ? (
-                      <OptimizedImage
-                        src={imageUrl}
-                        alt={titleText}
-                        fill
-                        sizes="(max-width: 768px) 85vw, 360px"
-                        className="object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-white/10" />
-                    )}
+        <h3
+          className="mb-10 text-[clamp(2.5rem,8vw,7rem)] font-light uppercase leading-[0.9] tracking-tighter"
+          style={{ fontFamily: fonts.heading, color: themeColors.mainText }}
+        >
+          {title}
+        </h3>
 
-                    {/* Sold Out ribbon removed per user request */}
-
-                    {/* Interactive Drag Hint */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">←</span>
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0V11m0 0.5V14m0-2.5v-6a1.5 1.5 0 113 0V11m0 0.5V14m0-2.5v-6a1.5 1.5 0 113 0V11m0 0.5V14" />
-                          </svg>
-                          <span className="text-lg">→</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content Info Area - White Minimal Text */}
-                  <div className="space-y-2">
-                    <h3 className="text-lg md:text-xl font-light uppercase tracking-tight text-white leading-tight">
-                      {typeof titleText === 'string' ? titleText : <TiptapRenderer content={titleText} as="inline" />}
-                    </h3>
-                    <div className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/40">
-                      {locationText}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+        {viewControl}
+      </div>
     </div>
+  );
+};
+
+export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projectsSection, className }) => {
+  const themeColors = useThemeColors();
+  const themeFonts = useThemeFonts();
+  const { projects } = useWebBuilder();
+  const reducedMotion = usePrefersReducedMotion();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const brandColor = themeColors.primaryButton;
+  const sectionEnabled = Boolean(projectsSection?.enabled);
+
+  const published = (projects || []).filter((p) => p.status === 'published');
+  const displayItems: DisplayItem[] =
+    sectionEnabled && projectsSection
+      ? (
+          projectsSection.projects?.length
+            ? (projectsSection.projects as ManualProject[])
+            : (published as Project[])
+        ).slice(0, 6)
+      : [];
+
+  useLayoutEffect(() => {
+    if (!sectionEnabled || reducedMotion || !containerRef.current || displayItems.length === 0) return;
+
+    const ctx = gsap.context(() => {
+      const sections = gsap.utils.toArray<HTMLElement>('.project-panel', containerRef.current);
+
+      sections.forEach((section, i) => {
+        if (i === sections.length - 1) return;
+
+        const bg = section.querySelector('[data-project-bg]');
+
+        gsap
+          .timeline({
+            scrollTrigger: {
+              trigger: section,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: 0.65,
+              pin: true,
+              pinSpacing: false,
+              invalidateOnRefresh: true,
+            },
+          })
+          .to(section, {
+            scale: 0.9,
+            opacity: 0,
+            filter: 'blur(10px)',
+            ease: 'none',
+          })
+          .to(
+            bg,
+            {
+              yPercent: -20,
+              ease: 'none',
+            },
+            0,
+          );
+      });
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, [sectionEnabled, displayItems.length, reducedMotion]);
+
+  if (!sectionEnabled || !projectsSection || displayItems.length === 0) return null;
+
+  return (
+    <section
+      ref={containerRef}
+      className={cn('relative', className)}
+      style={{ fontFamily: themeFonts.body, backgroundColor: themeColors.cardBackground }}
+    >
+      <div className="relative z-50 flex h-[60vh] flex-col justify-end px-6 pb-20 lg:px-20">
+        <div className="mb-8 h-px w-12" style={{ backgroundColor: brandColor }} />
+        <h2
+          className="text-[clamp(2rem,5vw,4rem)] font-light uppercase leading-tight"
+          style={{ fontFamily: themeFonts.heading, color: themeColors.mainText }}
+        >
+          {projectsSection.title ? (
+            <TiptapRenderer content={projectsSection.title} as="inline" />
+          ) : null}
+        </h2>
+      </div>
+
+      <div className="relative">
+        {displayItems.map((item, idx) => (
+          <div
+            key={isProjectEntity(item) ? item._id : `manual-${idx}`}
+            className="project-panel relative h-screen w-full"
+          >
+            <ProjectSlide
+              item={item}
+              index={idx}
+              brandColor={brandColor}
+              fonts={{ heading: themeFonts.heading, body: themeFonts.body }}
+              themeColors={themeColors}
+            />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 };
 

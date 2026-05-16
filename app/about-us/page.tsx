@@ -20,11 +20,12 @@ export default function AboutPage() {
       <main className="flex-1">
         {!loading && aboutPage && (
           <>
-            <HeroSection hero={aboutPage.hero} />
+            <HeroSection hero={aboutPage.hero} projectsSection={aboutPage.projectsSection} />
             <AboutSection aboutSection={aboutPage.aboutSection} />
             <WhyChooseUsSection whyChooseUsSection={aboutPage.whyChooseUsSection} />
-            <CompanyDetailSection companyDetailSection={aboutPage.companyDetailSection} />
             <CTA2Section cta2Section={aboutPage.cta2Section} />
+            <CompanyDetailSection companyDetailSection={aboutPage.companyDetailSection} />
+          
           </>
         )}
       </main>

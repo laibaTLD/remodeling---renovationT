@@ -43,8 +43,16 @@ export const ThemeFontWrapper: React.FC<ThemeFontWrapperProps> = ({ children }) 
       // Text colors
       if (theme.lightPrimaryColor) styles['--wb-text-main'] = theme.lightPrimaryColor;
       if (theme.lightSecondaryColor) styles['--wb-text-secondary'] = theme.lightSecondaryColor;
-      if (theme.darkPrimaryColor) styles['--wb-text-on-dark'] = theme.darkPrimaryColor;
-      if (theme.darkSecondaryColor) styles['--wb-text-on-dark-secondary'] = theme.darkSecondaryColor;
+      if (theme.textOnDarkColor) styles['--wb-text-on-dark'] = theme.textOnDarkColor;
+      else if (theme.darkPrimaryColor) styles['--wb-text-on-dark'] = theme.darkPrimaryColor;
+      else if (theme.lightPrimaryColor) styles['--wb-text-on-dark'] = theme.lightPrimaryColor;
+      if (theme.textOnDarkSecondaryColor) {
+        styles['--wb-text-on-dark-secondary'] = theme.textOnDarkSecondaryColor;
+      } else if (theme.darkSecondaryColor) {
+        styles['--wb-text-on-dark-secondary'] = theme.darkSecondaryColor;
+      } else if (theme.lightSecondaryColor) {
+        styles['--wb-text-on-dark-secondary'] = theme.lightSecondaryColor;
+      }
 
       // Primary UI Colors (Buttons etc)
       const primaryColor = theme.primaryButtonColorLight || theme.primaryButtonColorDark;

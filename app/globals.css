@@ -65,6 +65,15 @@
   }
 }
 
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+html.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
 html {
   scroll-behavior: auto;
   scrollbar-gutter: stable;
@@ -117,6 +126,13 @@ html.preloader-active::-webkit-scrollbar-thumb {
 /* Hide navbar layers while preloader is active */
 html.preloader-active header,
 html.preloader-active header + div.fixed.inset-0 {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Hide header during cinematic hero intro (loading + reveal) */
+html.hero-intro-active header {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -228,4 +244,151 @@ html.preloader-active header + div.fixed.inset-0 {
 
 .text-balance {
   text-wrap: balance;
+}
+
+/* Dark luxury interior surface — uses site builder theme (--wb-section-bg-dark, --wb-text-on-dark, etc.) */
+.wb-surface-lux {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--wb-section-bg-dark) 90%, var(--wb-page-bg)) 0%,
+    var(--wb-section-bg-dark) 46%,
+    color-mix(in srgb, var(--wb-section-bg-dark) 90%, var(--wb-page-bg)) 100%
+  );
+  color: var(--wb-text-on-dark);
+}
+
+.wb-surface-lux::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.045;
+  background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--wb-text-on-dark) 7%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--wb-text-on-dark) 7%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: min(5.5vw, 80px) min(5.5vw, 80px);
+}
+
+.wb-surface-lux-inner {
+  position: relative;
+  z-index: 1;
+}
+
+/* Light editorial surface — site builder --wb-section-bg-light, --wb-text-main / --wb-text-secondary */
+.wb-surface-light {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--wb-section-bg-light) 94%, var(--wb-page-bg)) 0%,
+    var(--wb-section-bg-light) 48%,
+    color-mix(in srgb, var(--wb-section-bg-light) 92%, var(--wb-page-bg)) 100%
+  );
+  color: var(--wb-text-main);
+}
+
+.wb-surface-light::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.04;
+  background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--wb-text-main) 8%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--wb-text-main) 8%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: min(5.5vw, 80px) min(5.5vw, 80px);
+}
+
+.wb-text-on-light {
+  color: var(--wb-text-main);
+}
+.wb-text-on-light-secondary {
+  color: var(--wb-text-secondary);
+}
+.wb-border-on-light {
+  border-color: color-mix(in srgb, var(--wb-text-main) 14%, transparent);
+}
+.wb-border-on-light-soft {
+  border-color: color-mix(in srgb, var(--wb-text-main) 22%, transparent);
+}
+.wb-hairline-t-light {
+  border-top: 1px solid color-mix(in srgb, var(--wb-text-main) 10%, transparent);
+}
+.wb-glass-on-light {
+  background-color: color-mix(in srgb, var(--wb-text-main) 4%, transparent);
+}
+.wb-glass-on-light-strong {
+  background-color: color-mix(in srgb, var(--wb-text-main) 7%, transparent);
+}
+.wb-ring-offset-light {
+  --tw-ring-offset-color: var(--wb-section-bg-light);
+}
+
+/* On-dark tokens (ThemeFontWrapper maps these from the site builder database) */
+.wb-text-on-dark {
+  color: var(--wb-text-on-dark);
+}
+.wb-text-on-dark-secondary {
+  color: var(--wb-text-on-dark-secondary);
+}
+.wb-bg-section-dark {
+  background-color: var(--wb-section-bg-dark);
+}
+.wb-bg-card-dark {
+  background-color: var(--wb-card-bg-dark);
+}
+.wb-glass-on-dark {
+  background-color: color-mix(in srgb, var(--wb-text-on-dark) 5%, transparent);
+}
+.wb-glass-on-dark-strong {
+  background-color: color-mix(in srgb, var(--wb-text-on-dark) 9%, transparent);
+}
+.wb-border-on-dark {
+  border-color: color-mix(in srgb, var(--wb-text-on-dark) 12%, transparent);
+}
+.wb-border-on-dark-soft {
+  border-color: color-mix(in srgb, var(--wb-text-on-dark) 18%, transparent);
+}
+.wb-hairline-t {
+  border-top: 1px solid color-mix(in srgb, var(--wb-text-on-dark) 10%, transparent);
+}
+.wb-hairline-b {
+  border-bottom: 1px solid color-mix(in srgb, var(--wb-text-on-dark) 10%, transparent);
+}
+.wb-fade-vignette-t {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--wb-section-bg-dark) 88%, transparent),
+    color-mix(in srgb, var(--wb-section-bg-dark) 42%, transparent),
+    transparent
+  );
+}
+.wb-fade-vignette-b {
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--wb-section-bg-dark) 88%, transparent),
+    color-mix(in srgb, var(--wb-section-bg-dark) 42%, transparent),
+    transparent
+  );
+}
+.wb-ring-offset-surface {
+  --tw-ring-offset-color: var(--wb-section-bg-dark);
 }

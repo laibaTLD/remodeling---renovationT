@@ -317,6 +317,12 @@ const renderNode = (node: any, key?: React.Key): React.ReactNode => {
   return null;
 };
 
+/** Skip Tailwind `prose` when content should inherit section text color (e.g. TIPTAP_INHERIT). */
+const blockWrapperClass = (className?: string) =>
+  className?.includes('text-inherit')
+    ? cn('max-w-none', className)
+    : cn('prose prose-gray max-w-none', className);
+
 export const TiptapRenderer: React.FC<TiptapRendererProps> = ({ 
   content, 
   className,
@@ -340,7 +346,7 @@ export const TiptapRenderer: React.FC<TiptapRendererProps> = ({
           return <span className={className}>{rendered}</span>;
         }
         return (
-          <div className={cn('prose prose-gray max-w-none', className)}>
+          <div className={blockWrapperClass(className)}>
             {rendered}
           </div>
         );
@@ -399,7 +405,7 @@ export const TiptapRenderer: React.FC<TiptapRendererProps> = ({
   }
   
   return (
-    <div className={cn('prose prose-gray max-w-none', className)}>
+    <div className={blockWrapperClass(className)}>
       {rendered}
     </div>
   );

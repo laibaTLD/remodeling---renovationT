@@ -60,6 +60,8 @@ export interface Site {
     hoverActiveColorDark?: string;
     inactiveColorLight?: string;
     inactiveColorDark?: string;
+    textOnDarkColor?: string;
+    textOnDarkSecondaryColor?: string;
     // Fonts
     headingFont?: string;
     bodyFont?: string;
@@ -278,6 +280,12 @@ export interface Page {
     showForm: boolean;
     showMap: boolean;
     showContactInfo: boolean;
+  };
+  servingAreasSection?: {
+    enabled: boolean;
+    title?: any;
+    description?: any;
+    serviceSlug?: string;
   };
   blogSection?: {
     enabled: boolean;

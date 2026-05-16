@@ -3,8 +3,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Page } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
-import { cn } from '@/app/lib/utils';
-import { useThemeColors } from '@/app/hooks/useTheme';
+import { cn, TIPTAP_INHERIT } from '@/app/lib/utils';
+import { useThemeColors, useThemeFonts, useSectionContrast } from '@/app/hooks/useTheme';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 
@@ -19,6 +19,8 @@ interface WhyChooseUsSectionProps {
 
 export const WhyChooseUsSection: React.FC<WhyChooseUsSectionProps> = ({ whyChooseUsSection, className }) => {
   const themeColors = useThemeColors();
+  const themeFonts = useThemeFonts();
+  const contrast = useSectionContrast('light');
   const sectionRef = useRef<HTMLElement>(null);
   const headlineRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement>(null);
@@ -68,31 +70,29 @@ export const WhyChooseUsSection: React.FC<WhyChooseUsSectionProps> = ({ whyChoos
   if (!whyChooseUsSection?.enabled) return null;
 
   const brandColor = themeColors.primaryButton;
-  const primaryTextColor = themeColors.lightPrimaryText;
-  const secondaryTextColor = themeColors.lightSecondaryText;
 
   const items = whyChooseUsSection.items || [];
 
   return (
     <section
       ref={sectionRef}
-      className={cn('relative py-20 lg:py-32 overflow-hidden bg-[var(--wb-page-bg)]', className)}
+      className={cn('wb-surface-light wb-hairline-t-light relative overflow-hidden py-20 lg:py-32', className)}
     >
-      <div className="max-w-[1800px] mx-auto px-8 md:px-16 lg:px-24">
+      <div className="relative z-[1] mx-auto max-w-[1800px] px-8 md:px-16 lg:px-24">
 
         {/* Editorial Header - Large Scale Centered */}
         <div ref={headlineRef} className="flex flex-col items-center text-center  mb-14 lg:mb-20">
           <div className="flex items-center gap-4">
             <div className="w-12 h-[1px]" style={{ backgroundColor: brandColor }} />
-            <span className="text-[10px] font-bold tracking-[0.4em] uppercase" style={{ color: primaryTextColor }}>
+            <span className={cn(contrast.textSecondary, 'text-[10px] font-bold tracking-[0.4em] uppercase')}>
               Philosophy
             </span>
             <div className="w-12 h-[1px]" style={{ backgroundColor: brandColor }} />
           </div>
 
           {whyChooseUsSection.title && (
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-sans tracking-tight uppercase font-light leading-none max-w-5xl">
-              <div className="[&_p:first-child]:text-primary [&_span:first-of-type]:text-primary" style={{ color: primaryTextColor }}>
+            <h2 className={cn(contrast.textPrimary, 'max-w-5xl font-sans text-4xl font-light uppercase leading-none tracking-tight md:text-5xl lg:text-6xl')} style={{ fontFamily: themeFonts.heading }}>
+              <div className="[&_p:first-child]:text-primary [&_span:first-of-type]:text-primary">
                 <style jsx>{`
                      h2 :global(p:first-child), h2 :global(span:first-child) {
                         color: ${brandColor} !important;
@@ -102,17 +102,16 @@ export const WhyChooseUsSection: React.FC<WhyChooseUsSectionProps> = ({ whyChoos
                         font-weight: 300;
                      }
                    `}</style>
-                <TiptapRenderer content={whyChooseUsSection.title} as="inline" />
+                <TiptapRenderer content={whyChooseUsSection.title} as="inline" className={TIPTAP_INHERIT} />
               </div>
             </h2>
           )}
 
           {whyChooseUsSection.description && (
             <div
-              className="max-w-xl text-base md:text-lg font-light leading-relaxed tracking-wide opacity-70"
-              style={{ color: secondaryTextColor }}
+              className={cn(contrast.textSecondary, 'max-w-xl text-base font-light leading-relaxed tracking-wide opacity-90 md:text-lg')}
             >
-              <TiptapRenderer content={whyChooseUsSection.description} />
+              <TiptapRenderer content={whyChooseUsSection.description} className={TIPTAP_INHERIT} />
             </div>
           )}
         </div>
@@ -120,13 +119,13 @@ export const WhyChooseUsSection: React.FC<WhyChooseUsSectionProps> = ({ whyChoos
         {/* Values Grid - High Fidelity Digital Look */}
         <div ref={itemsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-16 lg:gap-x-24">
           {items.map((item, idx) => (
-            <div key={idx} className="group relative pt-12 border-t border-black/5 flex flex-col space-y-8">
+            <div key={idx} className={cn('group relative flex flex-col space-y-8 border-t pt-12', contrast.border)}>
 
               {/* Numbering Header */}
               <div className="flex justify-between items-start">
                 <div
-                  className="text-4xl lg:text-5xl font-extralight tracking-tighter opacity-10 group-hover:opacity-100 transition-opacity duration-700"
-                  style={{ color: brandColor }}
+                  className="text-4xl lg:text-5xl font-extralight tracking-tighter opacity-60 group-hover:opacity-100 transition-opacity duration-700"
+                  style={{ color: themeColors.mainText }}
                 >
                   {(idx + 1).toString().padStart(2, '0')}
                 </div>
@@ -139,10 +138,10 @@ export const WhyChooseUsSection: React.FC<WhyChooseUsSectionProps> = ({ whyChoos
               <div className="space-y-6">
                 {item.title && (
                   <h3
-                    className="text-xl md:text-2xl font-sans tracking-tight uppercase font-light leading-tight"
-                    style={{ color: primaryTextColor }}
+                    className={cn(contrast.textPrimary, 'font-sans text-xl font-light uppercase leading-tight tracking-tight md:text-2xl')}
+                    style={{ fontFamily: themeFonts.heading }}
                   >
-                    <TiptapRenderer content={item.title} as="inline" />
+                    <TiptapRenderer content={item.title} as="inline" className={TIPTAP_INHERIT} />
                   </h3>
                 )}
 
@@ -150,10 +149,9 @@ export const WhyChooseUsSection: React.FC<WhyChooseUsSectionProps> = ({ whyChoos
 
                 {item.description && (
                   <div
-                    className="text-sm md:text-base font-light leading-relaxed tracking-wide opacity-70 uppercase"
-                    style={{ color: secondaryTextColor }}
+                    className={cn(contrast.textSecondary, 'text-sm font-light uppercase leading-relaxed tracking-wide opacity-90 md:text-base')}
                   >
-                    <TiptapRenderer content={item.description} />
+                    <TiptapRenderer content={item.description} className={TIPTAP_INHERIT} />
                   </div>
                 )}
               </div>

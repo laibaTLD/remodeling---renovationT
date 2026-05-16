@@ -71,13 +71,13 @@ export const ServiceFAQSection: React.FC<ServiceFAQSectionProps> = ({ service })
 
                     {/* Right Column: Premium Minimalist Accordion */}
                     <div className="lg:col-span-8">
-                        <div className="border-t border-black/10">
+                        <div>
                             {serviceFaqs.map((faq: any, index: number) => {
                                 const isOpen = openIndex === index;
                                 return (
                                     <div
                                         key={index}
-                                        className="border-b border-black/10 overflow-hidden transition-all duration-700"
+                                        className="overflow-hidden transition-all duration-700"
                                     >
                                         <button
                                             type="button"

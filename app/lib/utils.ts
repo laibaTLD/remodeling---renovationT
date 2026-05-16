@@ -5,6 +5,70 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Site-builder section background: dark luxury vs light editorial (see `wb-surface-lux` / `wb-surface-light` in globals.css). */
+export type SectionSurfaceTone = 'light' | 'dark'
+
+export function sectionSurfaceClass(tone: SectionSurfaceTone = 'dark') {
+  return tone === 'light' ? 'wb-surface-light' : 'wb-surface-lux'
+}
+
+function parseColorToRgb(color: string): [number, number, number] | null {
+  const c = color.trim()
+  if (c.startsWith('#')) {
+    let hex = c.slice(1)
+    if (hex.length === 3) hex = hex.split('').map((ch) => ch + ch).join('')
+    if (hex.length === 6) {
+      return [
+        parseInt(hex.slice(0, 2), 16),
+        parseInt(hex.slice(2, 4), 16),
+        parseInt(hex.slice(4, 6), 16),
+      ]
+    }
+  }
+  const rgb = c.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i)
+  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])]
+  return null
+}
+
+/** Infer light vs dark section tokens from the site builder page background color. */
+export function pageSurfaceToneFromBackground(color?: string | null): SectionSurfaceTone {
+  if (!color?.trim()) return 'light'
+  const rgb = parseColorToRgb(color)
+  if (!rgb) return 'light'
+  const [r, g, b] = rgb.map((v) => v / 255)
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return luminance > 0.55 ? 'light' : 'dark'
+}
+
+export function sectionHairlineClass(tone: SectionSurfaceTone = 'dark') {
+  return tone === 'light' ? 'wb-hairline-t-light' : 'wb-hairline-t'
+}
+
+export function sectionTextPrimaryClass(tone: SectionSurfaceTone = 'dark') {
+  return tone === 'light' ? 'wb-text-on-light' : 'wb-text-on-dark'
+}
+
+export function sectionTextSecondaryClass(tone: SectionSurfaceTone = 'dark') {
+  return tone === 'light' ? 'wb-text-on-light-secondary' : 'wb-text-on-dark-secondary'
+}
+
+export function sectionBorderClass(tone: SectionSurfaceTone = 'dark') {
+  return tone === 'light' ? 'wb-border-on-light' : 'wb-border-on-dark'
+}
+
+export function sectionGlassClass(tone: SectionSurfaceTone = 'dark', strong = false) {
+  if (tone === 'light') return strong ? 'wb-glass-on-light-strong' : 'wb-glass-on-light'
+  return strong ? 'wb-glass-on-dark-strong' : 'wb-glass-on-dark'
+}
+
+export function sectionTextCssVar(tone: SectionSurfaceTone = 'dark') {
+  return tone === 'light' ? 'var(--wb-text-main)' : 'var(--wb-text-on-dark)'
+}
+
+/** Tiptap blocks inherit parent section text color; links use theme primary. */
+export const TIPTAP_INHERIT =
+  'max-w-none text-inherit [&_a]:text-[var(--wb-primary)] [&_a]:underline-offset-4 [&_a:hover]:opacity-90 [&_em]:text-inherit [&_li]:text-inherit [&_p]:mt-0 [&_p]:text-inherit [&_strong]:text-inherit'
+
 /**
  * Normalizes NEXT_PUBLIC_API_BASE_URL to `{origin}/api` (see IMAGE_URL_GUIDE /
  * PUBLIC_ROUTES_DOCUMENTATION — files are served at /api/uploads/*).

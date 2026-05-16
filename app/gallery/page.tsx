@@ -20,7 +20,7 @@ export default function GalleryPage() {
       <main className="flex-1">
         {!loading && galleryPage && (
           <>
-            <HeroSection hero={galleryPage.hero} />
+            <HeroSection hero={galleryPage.hero} projectsSection={galleryPage.projectsSection} />
             <GallerySection gallerySection={galleryPage.gallerySection} />
           </>
         )}

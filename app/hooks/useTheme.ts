@@ -1,6 +1,18 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
+import {
+  pageSurfaceToneFromBackground,
+  sectionBorderClass,
+  sectionGlassClass,
+  sectionHairlineClass,
+  sectionSurfaceClass,
+  sectionTextCssVar,
+  sectionTextPrimaryClass,
+  sectionTextSecondaryClass,
+  type SectionSurfaceTone,
+} from '@/app/lib/utils';
 
 export interface ThemeColors {
   // Text colors
@@ -73,4 +85,30 @@ export function useThemeFonts(): ThemeFonts {
     heading: site?.theme?.headingFont,
     body: site?.theme?.bodyFont,
   };
+}
+
+/** Light vs dark text/surface tokens based on site builder `pageBackgroundColor`. */
+export function usePageSurfaceTone(): SectionSurfaceTone {
+  const { site } = useWebBuilder();
+  return useMemo(
+    () => pageSurfaceToneFromBackground(site?.theme?.pageBackgroundColor),
+    [site?.theme?.pageBackgroundColor]
+  );
+}
+
+/** Section surface + contrasting text (light copy on dark sections, dark copy on light sections). */
+export function useSectionContrast(surfaceTone: SectionSurfaceTone) {
+  return useMemo(
+    () => ({
+      surfaceTone,
+      surface: sectionSurfaceClass(surfaceTone),
+      hairline: sectionHairlineClass(surfaceTone),
+      textPrimary: sectionTextPrimaryClass(surfaceTone),
+      textSecondary: sectionTextSecondaryClass(surfaceTone),
+      border: sectionBorderClass(surfaceTone),
+      textVar: sectionTextCssVar(surfaceTone),
+      glass: (strong = false) => sectionGlassClass(surfaceTone, strong),
+    }),
+    [surfaceTone]
+  );
 }

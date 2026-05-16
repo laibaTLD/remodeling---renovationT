@@ -151,7 +151,9 @@ export default function PageSlugClient({ pageSlug: pageSlugProp }: PageSlugClien
           </>
         )}
 
-        {pageType === 'project-detail' && <HeroSection hero={page?.hero} />}
+        {pageType === 'project-detail' && (
+          <HeroSection hero={page?.hero} projectsSection={page?.projectsSection} />
+        )}
 
         {page?.slug === 'testimonials' && (
           <>

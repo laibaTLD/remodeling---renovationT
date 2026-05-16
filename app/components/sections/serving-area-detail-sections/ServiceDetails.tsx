@@ -71,12 +71,20 @@ export const ServiceDetails: React.FC<ServiceDetailsProps> = ({ details, classNa
               )}
             </div>
 
-            {(details.subtitle || details.description) && (
+            {details.subtitle && (
               <div
                 className="max-w-xs text-xs md:text-sm font-light leading-relaxed tracking-wider opacity-60 uppercase"
                 style={{ color: themeColors.secondaryText }}
               >
-                <TiptapRenderer content={details.subtitle || details.description} />
+                <TiptapRenderer content={details.subtitle} />
+              </div>
+            )}
+            {details.description && (
+              <div
+                className="max-w-xs text-xs md:text-sm font-light leading-relaxed tracking-wider opacity-60 uppercase"
+                style={{ color: themeColors.secondaryText }}
+              >
+                <TiptapRenderer content={details.description} />
               </div>
             )}
 

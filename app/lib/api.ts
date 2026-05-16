@@ -2,10 +2,12 @@ import { Site, Page, Service, BlogPost, Project } from './types';
 import api from './fetch-api';
 import { getImageSrc } from './utils';
 
+type ApiGetOptions = { silent?: boolean };
+
 // Site API
 export const siteApi = {
-  getSiteBySlug: async (slug: string): Promise<Site> => {
-    const response = await api.get(`/public/sites/${slug}`);
+  getSiteBySlug: async (slug: string, options?: ApiGetOptions): Promise<Site> => {
+    const response = await api.get(`/public/sites/${slug}`, options);
     return response.data?.data ?? response.data;
   },
   
@@ -17,8 +19,8 @@ export const siteApi = {
 
 // Page API
 export const pageApi = {
-  getPagesBySite: async (siteSlug: string): Promise<Page[]> => {
-    const response = await api.get(`/public/sites/${siteSlug}/pages`);
+  getPagesBySite: async (siteSlug: string, options?: ApiGetOptions): Promise<Page[]> => {
+    const response = await api.get(`/public/sites/${siteSlug}/pages`, options);
     return response.data?.data ?? response.data;
   },
   
@@ -35,8 +37,8 @@ export const pageApi = {
 
 // Service API
 export const serviceApi = {
-  getServicesBySite: async (siteSlug: string): Promise<Service[]> => {
-    const response = await api.get(`/public/sites/${siteSlug}/services`);
+  getServicesBySite: async (siteSlug: string, options?: ApiGetOptions): Promise<Service[]> => {
+    const response = await api.get(`/public/sites/${siteSlug}/services`, options);
     return response.data?.data ?? response.data;
   },
   
@@ -67,9 +69,9 @@ export const blogApi = {
 
 // Projects API
 export const projectApi = {
-  getProjectsBySite: async (siteSlug: string, limit?: number): Promise<Project[]> => {
+  getProjectsBySite: async (siteSlug: string, limit?: number, options?: ApiGetOptions): Promise<Project[]> => {
     const url = limit ? `/public/sites/${siteSlug}/projects?limit=${limit}` : `/public/sites/${siteSlug}/projects`;
-    const response = await api.get(url);
+    const response = await api.get(url, options);
     return response.data?.data ?? response.data;
   },
 

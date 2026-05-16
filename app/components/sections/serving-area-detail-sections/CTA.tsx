@@ -1,190 +1,89 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
-import { getImageSrc, cn } from '@/app/lib/utils';
-import { useThemeColors } from '@/app/hooks/useTheme';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
+import React from 'react';
+import type { Page } from '@/app/lib/types';
+import { getImageSrc } from '@/app/lib/utils';
+import { CTASection } from '@/app/components/sections/CTASection';
 
-if (typeof window !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger);
+interface CTAProps {
+  cta: unknown;
+  className?: string;
 }
 
-export const CTA: React.FC<{ cta: any; className?: string }> = ({ cta, className }) => {
-  const safeCta = cta ?? { enabled: false };
-  const sectionRef = useRef<HTMLElement>(null);
-  const textSectionRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const bgImageContainerRef = useRef<HTMLDivElement>(null);
-  const bgImageRef = useRef<HTMLDivElement>(null);
-  const themeColors = useThemeColors();
+type CtaSectionData = NonNullable<Page['ctaSection']>;
+type NormalizedCta = CtaSectionData & { subtitle?: unknown };
 
-  useEffect(() => {
-    if (!safeCta?.enabled) return;
+function resolveBackgroundImage(cta: Record<string, unknown>): string | undefined {
+  const raw =
+    cta.backgroundImage ??
+    cta.image ??
+    (Array.isArray(cta.mediaItems) && (cta.mediaItems[0] as { url?: string })?.url);
 
-    const ctx = gsap.context(() => {
-      // 1. Staggered Text Reveal
-      const elements = contentRef.current?.children;
-      if (elements) {
-        gsap.fromTo(elements,
-          { y: 30, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            stagger: 0.15,
-            duration: 1.2,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: contentRef.current,
-              start: 'top 85%',
-            }
-          }
-        );
-      }
+  if (!raw) return undefined;
+  if (typeof raw === 'string') return getImageSrc(raw);
+  if (typeof raw === 'object' && raw !== null && 'url' in raw) {
+    const url = (raw as { url?: string }).url;
+    return url ? getImageSrc(url) : undefined;
+  }
+  return undefined;
+}
 
-      // 2. Parallax Effect between Text Section and Image
-      if (bgImageRef.current) {
-        gsap.fromTo(bgImageRef.current,
-          { yPercent: -20 },
-          {
-            yPercent: 10,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: 'top bottom',
-              end: 'bottom top',
-              scrub: true,
-            }
-          }
-        );
-      }
+function resolvePrimaryButton(cta: Record<string, unknown>): CtaSectionData['primaryButton'] | undefined {
+  const primary = cta.primaryButton as { label?: string; href?: string } | undefined;
+  if (primary?.label?.trim()) {
+    return {
+      label: primary.label.trim(),
+      href: primary.href?.trim() || '/',
+    };
+  }
 
-      // Slow upward move for the text section itself
-      if (textSectionRef.current) {
-        gsap.fromTo(textSectionRef.current,
-          { y: 0 },
-          {
-            y: -50,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: 'top bottom',
-              end: 'bottom top',
-              scrub: true,
-            }
-          }
-        );
-      }
-    }, sectionRef);
+  const legacy = cta.ctaButton as { text?: string; url?: string; label?: string; href?: string } | undefined;
+  const label = legacy?.text?.trim() || legacy?.label?.trim();
+  if (label) {
+    return {
+      label,
+      href: legacy?.url?.trim() || legacy?.href?.trim() || '/contact-us',
+    };
+  }
 
-    return () => ctx.revert();
-  }, [safeCta]);
+  return undefined;
+}
 
-  if (!safeCta?.enabled) return null;
+function normalizeCtaSection(cta: unknown): NormalizedCta | null {
+  if (!cta || typeof cta !== 'object') return null;
 
-  const brandColor = themeColors.primaryButton;
-  const primaryTextColor = themeColors.lightPrimaryText;
-  const secondaryTextColor = themeColors.lightSecondaryText;
+  const data = cta as Record<string, unknown>;
+  if (data.enabled === false) return null;
 
-  const bgImg = safeCta.backgroundImage || safeCta.image || (safeCta.mediaItems?.[0]?.url);
-  const backgroundImageUrl = bgImg ? getImageSrc(bgImg) : null;
+  const primaryButton = resolvePrimaryButton(data);
+  const backgroundImage = resolveBackgroundImage(data);
+  const title = data.title;
+  const description = data.description;
+  const subtitle = data.subtitle ?? data.label;
 
-  return (
-    <section
-      ref={sectionRef}
-      className={cn('relative flex flex-col items-center bg-white', className)}
-    >
-      {/* 1. White Statement Block - Centered Editorial Design */}
-      <div
-        ref={textSectionRef}
-        className="relative z-20 w-fit p-10 flex flex-col items-center text-center px-6 bg-white"
-      >
-        <div ref={contentRef} className="max-w-4xl flex flex-col items-center">
+  if (!title && !description && !primaryButton && !subtitle) return null;
 
-          {/* Header Title - Huge, Centered, Multiple Lines */}
-          {safeCta.title && (
-            <h2
-              className="text-4xl md:text-5xl lg:text-7xl font-sans tracking-tight leading-[1.1] uppercase font-light mb-12"
-              style={{ color: primaryTextColor }}
-            >
-              <div className="text-balance [&_strong]:text-primary [&_span.brand]:text-primary">
-                {/* Styling logic: any bold text will be brand color */}
-                <style jsx>{`
-                    h2 :global(strong), h2 :global(b) {
-                        color: ${brandColor} !important;
-                        font-weight: 300; /* Keep it light weight even if bolded for color */
-                    }
-                  `}</style>
-                <TiptapRenderer content={safeCta.title} as="inline" />
-              </div>
-            </h2>
-          )}
+  const section: NormalizedCta = {
+    enabled: true,
+    title: title as CtaSectionData['title'],
+    description: description as CtaSectionData['description'],
+    primaryButton,
+    backgroundImage,
+    backgroundColor:
+      typeof data.backgroundColor === 'string' ? data.backgroundColor.trim() : undefined,
+  };
 
-          {/* Subheading / Description */}
-          {safeCta.description && (
-            <div
-              className="max-w-2xl text-lg md:text-xl lg:text-2xl font-light leading-relaxed tracking-wide opacity-80 mb-8"
-              style={{ color: secondaryTextColor }}
-            >
-              <TiptapRenderer content={safeCta.description} />
-            </div>
-          )}
+  if (subtitle) section.subtitle = subtitle;
 
-          {/* Note Text (Optional Small Detail) */}
-          {safeCta.label && (
-            <div className="text-[10px] md:text-[11px] font-light tracking-[0.2em] opacity-60 mb-16" style={{ color: primaryTextColor }}>
-              <TiptapRenderer content={safeCta.label} as="inline" />
-            </div>
-          )}
+  return section;
+}
 
-          {/* Circular Brand Color Discovery CTA */}
-          {(safeCta.ctaButton || safeCta.primaryButton) && (
-            <div className="">
-              <Link
-                href={safeCta.ctaButton?.url || safeCta.primaryButton?.href || '/'}
-                className="group inline-flex items-center gap-6"
-              >
-                <span
-                  className="text-[10px] md:text-[11px] font-bold tracking-[0.3em] uppercase transition-colors"
-                  style={{ color: brandColor }}
-                >
-                  {safeCta.ctaButton?.text || safeCta.primaryButton?.label || 'Get Started'}
-                </span>
-                <div
-                  className="w-14 h-14 rounded-full border flex items-center justify-center transition-all duration-700 group-hover:scale-110"
-                  style={{ borderColor: brandColor, color: brandColor }}
-                >
-                  <svg className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
+/** Service area CTA — same cinematic layout as site CTASection. */
+export const CTA: React.FC<CTAProps> = ({ cta, className }) => {
+  const ctaSection = normalizeCtaSection(cta);
+  if (!ctaSection) return null;
 
-      {/* 2. Panoramic Image Reveal - Overlaps the bottom of the white block */}
-      {backgroundImageUrl && (
-        <div
-          ref={bgImageContainerRef}
-          className="relative w-full h-[60vh] md:h-[85vh] lg:h-[110vh] overflow-hidden -mt-32 md:-mt-48 lg:-mt-64 z-10"
-        >
-          <div
-            ref={bgImageRef}
-            className="absolute inset-x-0 -top-20 h-[140%] bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundImageUrl})` }}
-          >
-            {/* Subtle Linear Fade for smooth overlap transition */}
-            <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white to-transparent" />
-          </div>
-        </div>
-      )}
-
-      {/* Spacing for sections below */}
-      {!backgroundImageUrl && <div className="h-32 bg-white w-full" />}
-    </section>
-  );
+  return <CTASection ctaSection={ctaSection} className={className} />;
 };
+
+export default CTA;

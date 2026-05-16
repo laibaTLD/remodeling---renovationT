@@ -29,37 +29,35 @@ export const WhyChooseUs: React.FC<WhyChooseUsProps> = ({ whyChooseUs, className
     >
       <div className="container mx-auto px-6 lg:px-12">
         {/* Header Area */}
-        {(whyChooseUs.title || whyChooseUs.description) && (
-          <div className="mb-16 lg:mb-24 max-w-4xl">
-             <div className="mb-6 flex items-center gap-3">
-                <span 
-                    className="text-[10px] tracking-[0.4em] uppercase font-bold"
-                    style={{ color: '#8B6E4E' }}
-                >
-                    OUR VALUES
-                </span>
-                <div className="w-12 h-[1px] bg-[#8B6E4E]/30" />
-            </div>
-
-            {whyChooseUs.title && (
-              <h2
-                className="text-3xl lg:text-4xl font-serif leading-tight mb-6"
-                style={{ color: themeColors.lightPrimaryText }}
+        <div className="mb-16 lg:mb-24 max-w-4xl">
+           <div className="mb-6 flex items-center gap-3">
+              <span
+                  className="text-[10px] tracking-[0.4em] uppercase font-bold"
+                  style={{ color: '#8B6E4E' }}
               >
-                <TiptapRenderer content={whyChooseUs.title} />
-              </h2>
-            )}
-            
-            {whyChooseUs.description && (
-              <div
-                className="text-base lg:text-lg font-light leading-relaxed max-w-2xl opacity-80"
-                style={{ color: themeColors.lightSecondaryText }}
-              >
-                <TiptapRenderer content={whyChooseUs.description} />
-              </div>
-            )}
+                  OUR VALUES
+              </span>
+              <div className="w-12 h-[1px] bg-[#8B6E4E]/30" />
           </div>
-        )}
+
+          {whyChooseUs.title && (
+            <h2
+              className="text-3xl lg:text-4xl font-serif leading-tight mb-6"
+              style={{ color: themeColors.lightPrimaryText }}
+            >
+              <TiptapRenderer content={whyChooseUs.title} />
+            </h2>
+          )}
+
+          {whyChooseUs.description && (
+            <div
+              className="text-base lg:text-lg font-light leading-relaxed max-w-2xl opacity-80"
+              style={{ color: themeColors.lightSecondaryText }}
+            >
+              <TiptapRenderer content={whyChooseUs.description} />
+            </div>
+          )}
+        </div>
 
         {/* Content Area - Minimalist List Layout */}
         {items.length > 0 && (

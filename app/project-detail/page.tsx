@@ -14,7 +14,9 @@ export default function ProjectDetailPage() {
         <div className="min-h-screen flex flex-col">
             <Header />
             <main className="flex-1">
-                {!loading && projectPage && <HeroSection hero={projectPage.hero} />}
+                {!loading && projectPage && (
+                  <HeroSection hero={projectPage.hero} projectsSection={projectPage.projectsSection} />
+                )}
             </main>
             <Footer />
         </div>

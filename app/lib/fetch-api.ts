@@ -3,6 +3,8 @@
 
 interface FetchOptions extends RequestInit {
   timeout?: number;
+  /** Skip console.error for failed requests (e.g. background polling). */
+  silent?: boolean;
 }
 
 class FetchError extends Error {
@@ -30,7 +32,7 @@ const createFetchApi = (baseURL: string, defaultTimeout = 30000) => {
     options: FetchOptions = {},
     retries = 3
   ): Promise<T> => {
-    const { timeout = defaultTimeout, ...fetchOptions } = options;
+    const { timeout = defaultTimeout, silent = false, ...fetchOptions } = options;
 
     const url = endpoint.startsWith('http')
       ? endpoint
@@ -62,14 +64,20 @@ const createFetchApi = (baseURL: string, defaultTimeout = 30000) => {
           devLog(`[fetch-api] Response status: ${response.status}`);
 
           if (!response.ok) {
-            if (response.status === 429 && remainingRetries > 0) {
+            const isRetryable =
+              remainingRetries > 0 &&
+              (response.status === 429 || response.status >= 500);
+
+            if (isRetryable) {
               const attempt = retries - remainingRetries;
               const baseDelay = Math.min(Math.pow(2, attempt + 1) * 1000, 5000);
               const jitter = Math.random() * 500;
               const delay = baseDelay + jitter;
-              console.warn(
-                `Rate limited (429), retrying in ${Math.round(delay)}ms... (${remainingRetries} retries left)`
-              );
+              if (!silent) {
+                console.warn(
+                  `[fetch-api] ${response.status} for ${url}, retrying in ${Math.round(delay)}ms (${remainingRetries} left)`
+                );
+              }
               remainingRetries -= 1;
               await sleep(delay);
               return runOnce();
@@ -113,7 +121,7 @@ const createFetchApi = (baseURL: string, defaultTimeout = 30000) => {
               error.message?.includes('404') ||
               error.message?.includes('status: 404') ||
               error.message?.toLowerCase().includes('not found');
-            if (!isNotFound) {
+            if (!silent && !isNotFound) {
               console.error(`[fetch-api] Error for ${url}:`, error.message);
             }
             throw new FetchError(error.message, (error as FetchError).status, (error as FetchError).response);
@@ -169,16 +177,34 @@ const createFetchApi = (baseURL: string, defaultTimeout = 30000) => {
   };
 };
 
-// Create API instance
-const rawBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5000/api');
+function resolveApiBaseUrl(): string {
+  const rawBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5000/api');
 
-const isLocalRaw = /^http:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?\b/i.test(rawBaseUrl);
-const API_BASE_URL = rawBaseUrl.startsWith('http://') && !isLocalRaw
-  ? rawBaseUrl.replace(/^http:\/\//i, 'https://')
-  : rawBaseUrl;
+  const isLocalRaw = /^http:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?\b/i.test(rawBaseUrl);
+  let base = rawBaseUrl.startsWith('http://') && !isLocalRaw
+    ? rawBaseUrl.replace(/^http:\/\//i, 'https://')
+    : rawBaseUrl;
 
-export const api = createFetchApi(API_BASE_URL);
+  // Browser requests to a remote API from localhost fail (CORS). Use Next rewrites instead.
+  if (typeof window !== 'undefined') {
+    const { hostname } = window.location;
+    const onLocalDev = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (onLocalDev && base.startsWith('http')) {
+      try {
+        const apiHost = new URL(base).hostname;
+        if (apiHost !== hostname) base = '/api';
+      } catch {
+        base = '/api';
+      }
+    }
+  }
+
+  return base;
+}
+
+export const api = createFetchApi(resolveApiBaseUrl());
 
 // Export for testing or custom instances
 export { createFetchApi, FetchError };

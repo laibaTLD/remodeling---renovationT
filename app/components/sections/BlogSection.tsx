@@ -1,147 +1,491 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
+import Link from 'next/link';
 import { Page } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
 import { getImageSrc, cn } from '@/app/lib/utils';
 import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
-import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
+import {
+  useThemeColors,
+  useThemeFonts
+} from '@/app/hooks/useTheme';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
 import { CardLoader } from '@/app/components/ui/SkeletonLoader';
+import {
+  ArrowUpRight,
+  Sparkles
+} from 'lucide-react';
 
-interface BlogSectionProps {
-    blogSection: Page['blogSection'];
-    className?: string;
+const tiptapLightSecondary =
+  'max-w-none text-inherit [&_a]:text-[var(--wb-primary)] [&_a:hover]:opacity-90 [&_em]:text-inherit [&_p]:mt-0 [&_p]:text-inherit [&_strong]:text-inherit';
+
+function resolvePostImageRaw(post: any): string | undefined {
+  const img = post?.featuredImage;
+  if (typeof img === 'string' && img.trim()) return img;
+  if (img?.url) return img.url;
+  if (post?.seo?.ogImageUrl) return post.seo.ogImageUrl;
+  return undefined;
 }
 
-export const BlogSection: React.FC<BlogSectionProps> = ({ blogSection, className }) => {
-    const [hoveredIndex, setHoveredIndex] = useState<number | null>(0);
-    const themeColors = useThemeColors();
-    const themeFonts = useThemeFonts();
-    const { blogPosts, loading } = useWebBuilder();
+function getPostImageSrc(post: any): string {
+  const raw = resolvePostImageRaw(post);
+  return raw ? getImageSrc(raw) : '';
+}
 
-    if (!blogSection?.enabled) return null;
+function getPostImageAlt(post: any): string {
+  const img = post?.featuredImage;
+  if (img && typeof img === 'object' && img.altText) return img.altText;
+  return post?.title || '';
+}
 
-    const displayPosts = blogPosts.slice(0, blogSection.postsToShow || 3);
+function formatPostDate(
+  iso: string | undefined,
+  show: boolean
+): string | null {
+  if (!show || !iso) return null;
 
-    if (loading && blogPosts.length === 0) {
-        return (
-            <section className="h-screen w-full flex overflow-hidden">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex-1 border-r border-black/5 p-12">
-                        <CardLoader />
-                    </div>
-                ))}
-            </section>
-        );
-    }
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(new Date(iso));
+  } catch {
+    return null;
+  }
+}
 
+interface BlogSectionProps {
+  blogSection: Page['blogSection'];
+  className?: string;
+}
+
+export const BlogSection: React.FC<
+  BlogSectionProps
+> = ({ blogSection, className }) => {
+  const themeColors = useThemeColors();
+  const themeFonts = useThemeFonts();
+
+  const { blogPosts, loading, site } =
+    useWebBuilder();
+
+  if (!blogSection?.enabled) return null;
+
+  const brandColor =
+    themeColors.primaryButton ||
+    themeColors.mainText;
+
+  const count = Math.min(
+    Math.max(
+      blogSection.postsToShow || 3,
+      1
+    ),
+    12
+  );
+
+  const displayPosts = blogPosts.slice(
+    0,
+    count
+  );
+
+  const showExcerpt = Boolean(
+    blogSection.showExcerpt
+  );
+
+  const showDate = Boolean(
+    blogSection.showDate
+  );
+
+  if (
+    loading &&
+    blogPosts.length === 0
+  ) {
     return (
-        <section 
-            className={cn('relative h-[100vh] min-h-[700px] w-full overflow-hidden flex flex-col md:flex-row', className)}
-            style={{ backgroundColor: themeColors.pageBackground }}
-        >
-            {/* Background Image Layer (The "Reveal" Effect) */}
-            <div className="absolute inset-0 z-0 hidden md:block">
-                {displayPosts.map((post, idx) => (
-                    <div
-                        key={`bg-${post._id}`}
-                        className={cn(
-                            "absolute inset-0 transition-opacity duration-1000 ease-in-out",
-                            hoveredIndex === idx ? "opacity-100" : "opacity-0"
-                        )}
-                    >
-                        {post.featuredImage && (
-                            <>
-                                <OptimizedImage
-                                    src={getImageSrc(post.featuredImage.url || (post.featuredImage as any))}
-                                    alt=""
-                                    fill
-                                    sizes="100vw"
-                                    className="object-cover grayscale-[0.3] brightness-75"
-                                />
-                                {/* Overlay to ensure text readability based on theme */}
-                                <div className="absolute inset-0 bg-black/20" />
-                            </>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            {/* Content Columns */}
-            {displayPosts.map((post, idx) => (
-                <article
-                    key={post._id}
-                    onMouseEnter={() => setHoveredIndex(idx)}
-                    className="relative z-10 flex-1 flex flex-col justify-between p-8 lg:p-12 border-b md:border-b-0 md:border-r transition-colors duration-500"
-                    style={{ borderColor: `${themeColors.inactive}30` }}
-                >
-                    {/* Top Branding / Logo Space */}
-                    <div className="flex justify-between items-start">
-                        <span 
-                            className="text-[10px] tracking-[0.4em] uppercase font-bold"
-                            style={{ color: '#fff', mixBlendMode: 'difference', fontFamily: themeFonts.body }}
-                        >
-                            {idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
-                        </span>
-                    </div>
-
-                    {/* Floating Project Card (Center) */}
-                    <div className="relative group w-full max-w-[320px] mx-auto transition-transform duration-700 ease-out transform group-hover:-translate-y-2">
-                         <a href={`/blog/${post.slug}`} className="block relative overflow-hidden aspect-[3/4] shadow-2xl">
-                            {post.featuredImage && (
-                                <OptimizedImage
-                                    src={getImageSrc(post.featuredImage.url || (post.featuredImage as any))}
-                                    alt={post.title}
-                                    fill
-                                    sizes="320px"
-                                    className="object-cover transition-transform duration-1000 group-hover:scale-110"
-                                />
-                            )}
-                            {/* "Sold Out" or Status Tag Style */}
-                            <div className="absolute top-4 right-[-35px] bg-red-600 text-white text-[10px] font-bold py-1 px-10 rotate-45 uppercase tracking-widest">
-                                Project
-                            </div>
-                         </a>
-                    </div>
-
-                    {/* Bottom Metadata */}
-                    <div className="mt-8">
-                        <h3
-                            className="text-xl lg:text-2xl font-medium tracking-widest uppercase mb-2"
-                            style={{ 
-                                color: hoveredIndex === idx ? '#fff' : themeColors.lightPrimaryText, 
-                                fontFamily: themeFonts.heading,
-                                mixBlendMode: 'difference'
-                            }}
-                        >
-                            <a href={`/blog/${post.slug}`}>{post.title}</a>
-                        </h3>
-                        
-                        {post.excerpt && (
-                            <div
-                                className="text-[11px] uppercase tracking-[0.2em] opacity-80"
-                                style={{ 
-                                    color: hoveredIndex === idx ? '#fff' : themeColors.lightSecondaryText, 
-                                    fontFamily: themeFonts.body,
-                                    mixBlendMode: 'difference'
-                                }}
-                            >
-                                <TiptapRenderer content={post.excerpt} />
-                            </div>
-                        )}
-                    </div>
-                </article>
+      <section
+        className={cn(
+          'relative overflow-hidden py-24 lg:py-40',
+          className
+        )}
+        style={{
+          backgroundColor:
+            themeColors.sectionBackground
+        }}
+      >
+        <div className="container mx-auto px-6 lg:px-10">
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="overflow-hidden border p-6 animate-pulse"
+                style={{
+                  backgroundColor:
+                    themeColors.cardBackground,
+                  borderColor: `${themeColors.inactive}20`
+                }}
+              >
+                <CardLoader />
+              </div>
             ))}
-
-            {/* Menu Label (Absolute position like the reference) */}
-            <div className="absolute top-8 right-12 z-20 hidden md:flex items-center gap-4">
-                 <span className="text-[10px] tracking-[0.3em] uppercase font-bold" style={{ color: '#fff', mixBlendMode: 'difference' }}>Menu</span>
-                 <div className="flex flex-col gap-1">
-                    <div className="w-6 h-px bg-current" style={{ color: '#fff', mixBlendMode: 'difference' }} />
-                    <div className="w-6 h-px bg-current" style={{ color: '#fff', mixBlendMode: 'difference' }} />
-                 </div>
-            </div>
-        </section>
+          </div>
+        </div>
+      </section>
     );
+  }
+
+  if (displayPosts.length === 0) {
+    return (
+      <section
+        className={cn(
+          'py-24 lg:py-32',
+          className
+        )}
+        style={{
+          backgroundColor:
+            themeColors.sectionBackground,
+          fontFamily: themeFonts.body
+        }}
+      >
+        <div className="container mx-auto px-6 lg:px-10 text-center">
+          <p
+            className="text-sm md:text-base font-light"
+            style={{
+              color: themeColors.secondaryText,
+              fontFamily: themeFonts.body
+            }}
+          >
+            No published posts yet. Add
+            posts in the builder to show
+            them here.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className={cn(
+        'relative overflow-hidden py-24 md:py-32 lg:py-40',
+        className
+      )}
+      style={{
+        backgroundColor:
+          themeColors.sectionBackground,
+        fontFamily: themeFonts.body
+      }}
+    >
+      {/* Ambient Glow */}
+      <div
+        className="absolute left-0 top-0 w-[600px] h-[600px] rounded-full blur-[140px] opacity-10 pointer-events-none"
+        style={{
+          backgroundColor: brandColor
+        }}
+      />
+
+      <div className="container mx-auto px-6 lg:px-10 relative z-10">
+        {/* Section Header */}
+        <div className="max-w-6xl mb-20 lg:mb-28">
+          {/* Top Meta */}
+          <div className="flex items-center gap-4 mb-8">
+            <div
+              className="w-14 h-[1px]"
+              style={{
+                backgroundColor:
+                  brandColor
+              }}
+            />
+
+            <span
+              className="text-[11px] uppercase tracking-[0.4em] font-semibold"
+              style={{
+                color: themeColors.secondaryText,
+                fontFamily: themeFonts.body
+              }}
+            >
+              {site?.business?.tagline ||
+                'Latest Insights'}
+            </span>
+          </div>
+
+          {/* Heading */}
+          {blogSection.title && (
+            <div
+              className="text-4xl md:text-6xl lg:text-7xl font-extralight uppercase leading-[0.95] tracking-[-0.03em]"
+              style={{
+                color:
+                  themeColors.mainText,
+                fontFamily:
+                  themeFonts.heading
+              }}
+            >
+              <TiptapRenderer
+                content={
+                  blogSection.title
+                }
+                as="inline"
+              />
+            </div>
+          )}
+
+          {/* Description */}
+          {blogSection.description && (
+            <div
+              className="mt-8 max-w-2xl text-sm md:text-base lg:text-lg leading-relaxed font-light"
+              style={{
+                color:
+                  themeColors.secondaryText
+              }}
+            >
+              <TiptapRenderer
+                content={
+                  blogSection.description
+                }
+                className={
+                  tiptapLightSecondary
+                }
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Featured Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-10">
+          {displayPosts.map(
+            (post, idx) => {
+              const imgSrc = getPostImageSrc(post) || null;
+
+              const dateLabel =
+                formatPostDate(
+                  post.publishedAt ||
+                    post.createdAt,
+                  showDate
+                );
+
+              const category =
+                post.categories?.[0];
+
+              const isFeatured =
+                idx === 0;
+
+              return (
+                <article
+                  key={post._id}
+                  className={cn(
+                    'group relative overflow-hidden border transition-all duration-700 hover:-translate-y-1',
+                    isFeatured
+                      ? 'xl:col-span-7'
+                      : 'xl:col-span-5'
+                  )}
+                  style={{
+                    backgroundColor: `${themeColors.cardBackground}75`,
+                    borderColor: `${themeColors.inactive}20`,
+                    backdropFilter:
+                      'blur(18px)'
+                  }}
+                >
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    className="block h-full no-underline"
+                  >
+                    {/* Image */}
+                    <div
+                      className={cn(
+                        'relative overflow-hidden',
+                        isFeatured
+                          ? 'aspect-[16/10]'
+                          : 'aspect-[4/3]'
+                      )}
+                    >
+                      {imgSrc ? (
+                        <>
+                          <OptimizedImage
+                            src={imgSrc}
+                            alt={getPostImageAlt(post)}
+                            fill
+                            sizes="100vw"
+                            className="object-cover transition-transform duration-[1600ms] ease-out group-hover:scale-105"
+                            priority={
+                              idx < 2
+                            }
+                          />
+
+                          {/* Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                        </>
+                      ) : (
+                        <div
+                          className="absolute inset-0 flex items-center justify-center"
+                          style={{
+                            backgroundColor:
+                              themeColors.cardBackground
+                          }}
+                        >
+                          <Sparkles
+                            size={26}
+                            style={{
+                              color:
+                                themeColors.secondaryText
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Category */}
+                      {category && (
+                        <div
+                          className="absolute top-5 left-5 px-4 py-2 backdrop-blur-xl"
+                          style={{
+                            backgroundColor:
+                              'rgba(0,0,0,0.35)',
+                            border:
+                              '1px solid rgba(255,255,255,0.08)'
+                          }}
+                        >
+                          <span
+                            className="text-[10px] uppercase tracking-[0.35em] text-white"
+                            style={{ fontFamily: themeFonts.body }}
+                          >
+                            {category}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Floating Arrow */}
+                      <div
+                        className="absolute top-5 right-5 w-12 h-12 flex items-center justify-center backdrop-blur-xl opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"
+                        style={{
+                          backgroundColor:
+                            'rgba(0,0,0,0.35)',
+                          border:
+                            '1px solid rgba(255,255,255,0.08)'
+                        }}
+                      >
+                        <ArrowUpRight
+                          size={18}
+                          className="text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-7 md:p-8 lg:p-10">
+                      {/* Meta */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5">
+                        {dateLabel && (
+                          <time
+                            dateTime={
+                              post.publishedAt ||
+                              post.createdAt
+                            }
+                            className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+                            style={{
+                              color: themeColors.secondaryText,
+                              fontFamily: themeFonts.body
+                            }}
+                          >
+                            {dateLabel}
+                          </time>
+                        )}
+
+                        {post.author
+                          ?.name && (
+                          <span
+                            className="text-[10px] uppercase tracking-[0.25em]"
+                            style={{
+                              color:
+                                themeColors.secondaryText
+                            }}
+                          >
+                            {
+                              post.author
+                                .name
+                            }
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h3
+                        className={cn(
+                          'font-extralight uppercase leading-[1.05]',
+                          isFeatured
+                            ? 'text-3xl md:text-5xl'
+                            : 'text-2xl md:text-3xl'
+                        )}
+                        style={{
+                          color:
+                            themeColors.mainText,
+                          fontFamily:
+                            themeFonts.heading
+                        }}
+                      >
+                        {post.title}
+                      </h3>
+
+                      {/* Excerpt */}
+                      {showExcerpt &&
+                        post.excerpt && (
+                          <div
+                            className="mt-6 text-sm md:text-base leading-relaxed font-light line-clamp-3"
+                            style={{
+                              color: themeColors.secondaryText,
+                              fontFamily: themeFonts.body
+                            }}
+                          >
+                            <TiptapRenderer
+                              content={
+                                post.excerpt
+                              }
+                              className={
+                                tiptapLightSecondary
+                              }
+                            />
+                          </div>
+                        )}
+
+                      {/* CTA */}
+                      <div className="mt-10 flex items-center justify-between">
+                        <div
+                          className="w-12 h-[1px] transition-all duration-500 group-hover:w-24"
+                          style={{
+                            backgroundColor:
+                              brandColor
+                          }}
+                        />
+
+                        <span
+                          className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.35em] font-semibold"
+                          style={{
+                            color: brandColor,
+                            fontFamily: themeFonts.body
+                          }}
+                        >
+                          Read More
+
+                          <ArrowUpRight
+                            size={15}
+                            className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
+                          />
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Accent */}
+                    <div
+                      className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full transition-all duration-700"
+                      style={{
+                        backgroundColor:
+                          brandColor
+                      }}
+                    />
+                  </Link>
+                </article>
+              );
+            }
+          )}
+        </div>
+      </div>
+    </section>
+  );
 };

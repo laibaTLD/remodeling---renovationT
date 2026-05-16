@@ -92,7 +92,12 @@ export const WebBuilderProvider: React.FC<WebBuilderProviderProps> = ({ children
         loadServiceAreaPages(siteData.slug),
       ]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load site');
+      const msg = err instanceof Error ? err.message : 'Failed to load site';
+      setError(
+        msg.includes('500')
+          ? 'The site builder API is temporarily unavailable. Refresh the page or try again shortly.'
+          : msg
+      );
     } finally {
       setLoading(false);
     }
@@ -183,7 +188,7 @@ export const WebBuilderProvider: React.FC<WebBuilderProviderProps> = ({ children
 
     const intervalId = setInterval(async () => {
       try {
-        const siteData = await siteApi.getSiteBySlug(site.slug);
+        const siteData = await siteApi.getSiteBySlug(site.slug, { silent: true });
         setSite((prevSite) => {
           if (prevSite && JSON.stringify(prevSite.theme) !== JSON.stringify(siteData.theme)) {
             return siteData;
@@ -203,7 +208,7 @@ export const WebBuilderProvider: React.FC<WebBuilderProviderProps> = ({ children
 
     const intervalId = setInterval(async () => {
       try {
-        const projectsData = await projectApi.getProjectsBySite(site.slug);
+        const projectsData = await projectApi.getProjectsBySite(site.slug, undefined, { silent: true });
         setProjects((prevProjects) =>
           JSON.stringify(prevProjects) !== JSON.stringify(projectsData)
             ? projectsData
@@ -222,7 +227,7 @@ export const WebBuilderProvider: React.FC<WebBuilderProviderProps> = ({ children
 
     const intervalId = setInterval(async () => {
       try {
-        const pagesData = await pageApi.getPagesBySite(site.slug);
+        const pagesData = await pageApi.getPagesBySite(site.slug, { silent: true });
         setPages((prevPages) =>
           JSON.stringify(prevPages) !== JSON.stringify(pagesData) ? pagesData : prevPages
         );
@@ -239,7 +244,7 @@ export const WebBuilderProvider: React.FC<WebBuilderProviderProps> = ({ children
 
     const intervalId = setInterval(async () => {
       try {
-        const servicesData = await serviceApi.getServicesBySite(site.slug);
+        const servicesData = await serviceApi.getServicesBySite(site.slug, { silent: true });
         setServices((prevServices) =>
           JSON.stringify(prevServices) !== JSON.stringify(servicesData)
             ? servicesData

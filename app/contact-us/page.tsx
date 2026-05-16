@@ -17,7 +17,7 @@ export default function ContactPage() {
       <main className="flex-1">
         {!loading && contactPage && (
           <>
-            <HeroSection hero={contactPage.hero} />
+            <HeroSection hero={contactPage.hero} projectsSection={contactPage.projectsSection} />
             <ContactSection contactSection={contactPage.contactSection} />
           </>
         )}

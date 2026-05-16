@@ -2,150 +2,177 @@
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
-import { cn } from '@/app/lib/utils';
+import { cn, TIPTAP_INHERIT } from '@/app/lib/utils';
 import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
-import { ArrowRight } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
 
 interface ServiceServingAreasSectionProps {
-    service: any;
+  service: any;
+  className?: string;
 }
 
-export const ServiceServingAreasSection: React.FC<ServiceServingAreasSectionProps> = ({ service }) => {
-    const themeColors = useThemeColors();
-    const themeFonts = useThemeFonts();
-    const { site, serviceAreaPages } = useWebBuilder();
+function resolveServiceSlug(service: any): string {
+  if (typeof service?.slug === 'string' && service.slug.trim()) {
+    return String(service.slug)
+      .trim()
+      .toLowerCase()
+      .replace(/^\/+|\/+$/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+  return String(service?.name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
 
-    const areas = useMemo(() => {
-        const serviceAreas = service.serviceAreas || [];
-        const siteAreas = Array.isArray(site?.serviceAreas) ? site!.serviceAreas.filter(Boolean) : [];
-        
-        // Use service-specific areas if available, otherwise fall back to site areas
-        return (Array.isArray(serviceAreas) && serviceAreas.length > 0)
-            ? serviceAreas
-            : siteAreas;
-    }, [service.serviceAreas, site?.serviceAreas, serviceAreaPages]);
-
-    if (areas.length === 0) return null;
-
-    // Generate service slug from service name
-    const serviceSlug = typeof service?.slug === 'string' && service.slug.trim()
-        ? String(service.slug).trim().toLowerCase().replace(/^\/+|\/+$/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-        : String(service.name || '')
+function resolveAreaDisplay(area: unknown): { areaName: string; areaSlug: string } {
+  const cityName = typeof area === 'string' ? area : (area as { city?: string })?.city ?? String(area);
+  const regionName =
+    typeof area === 'string' ? '' : ((area as { region?: string })?.region || '');
+  const areaSlug = regionName
+    ? `${String(cityName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${String(regionName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
+    : String(cityName)
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/[,\s]+/g, '-')
+        .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
+  const areaName = `${cityName}${regionName ? `, ${regionName}` : ''}`;
+  return { areaName, areaSlug };
+}
 
-    const brandColor = themeColors.primaryButton;
-    const shortDesc = service?.shortDescription;
-    const hasShortDesc =
-        typeof shortDesc === 'string' ? shortDesc.trim().length > 0 : Boolean(shortDesc && typeof shortDesc === 'object');
+export const ServiceServingAreasSection: React.FC<ServiceServingAreasSectionProps> = ({
+  service,
+  className,
+}) => {
+  const themeColors = useThemeColors();
+  const themeFonts = useThemeFonts();
+  const { site } = useWebBuilder();
 
-    return (
-        <section
-            className="py-24 md:py-32 lg:py-48 border-t border-black/5"
-            style={{ backgroundColor: themeColors.pageBackground, fontFamily: themeFonts.body }}
-        >
-            <div className="container mx-auto px-6 lg:px-12">
-                <div className="grid lg:grid-cols-12 gap-20 lg:gap-24 items-start">
+  const areas = useMemo(() => {
+    const serviceAreas = service?.serviceAreas || [];
+    const siteAreas = Array.isArray(site?.serviceAreas)
+      ? site!.serviceAreas.filter(Boolean)
+      : [];
+    return Array.isArray(serviceAreas) && serviceAreas.length > 0 ? serviceAreas : siteAreas;
+  }, [service?.serviceAreas, site?.serviceAreas]);
 
-                    {/* LEFT SIDE: STICKY HEADER */}
-                    <div className="lg:col-span-4 lg:sticky lg:top-36 space-y-10">
-                        <div className="space-y-6">
-                            {site?.business?.tagline?.trim() && (
-                            <span
-                                className="text-[10px] tracking-[0.4em] uppercase font-bold opacity-30"
-                                style={{ color: themeColors.mainText }}
-                            >
-                                {site.business.tagline.trim()}
-                            </span>
-                            )}
+  const serviceSlug = resolveServiceSlug(service);
+  const brandColor = themeColors.primaryButton || themeColors.mainText;
 
-                            <h2
-                                className="text-3xl md:text-4xl lg:text-6xl font-extralight tracking-[0.1em] uppercase leading-[1.1] text-balance"
-                                style={{
-                                    color: themeColors.mainText,
-                                    fontFamily: themeFonts.heading
-                                }}
-                            >
-                                {service?.name ? `Serving ${service.name} areas` : 'Serving areas'}
-                            </h2>
-                        </div>
+  const resolvedTitle = service?.name
+    ? `Serving ${service.name} Areas`
+    : 'Areas We Serve';
 
-                        {hasShortDesc && (
-                        <div
-                            className="max-w-xs text-xs md:text-sm font-light leading-relaxed tracking-wider opacity-60 uppercase"
-                            style={{ color: themeColors.secondaryText }}
-                        >
-                            {typeof shortDesc === 'string' ? shortDesc : <TiptapRenderer content={shortDesc} as="inline" />}
-                        </div>
-                        )}
+  const shortDesc = service?.shortDescription;
+  const hasShortDesc =
+    typeof shortDesc === 'string'
+      ? shortDesc.trim().length > 0
+      : Boolean(shortDesc && typeof shortDesc === 'object');
 
-                        {/* Signature Brand Detail */}
-                        <div className="pt-8">
-                            <div className="w-16 h-[2px]" style={{ backgroundColor: brandColor }} />
-                        </div>
-                    </div>
+  if (areas.length === 0) return null;
 
-                    {/* RIGHT SIDE: EDITORIAL LIST OF LOCATIONS */}
-                    <div className="lg:col-span-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 border-t border-black/10">
-                            {areas.map((area: any, idx: number) => {
-                                const cityName = typeof area === 'string' ? area : area.city;
-                                const regionName = typeof area === 'string' ? '' : (area.region || '');
-                                const citySlug = regionName 
-                                    ? `${String(cityName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${String(regionName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
-                                    : String(cityName)
-                                        .toLowerCase()
-                                        .replace(/[^a-z0-9]+/g, '-')
-                                        .replace(/^-|-$/g, '');
-                                
-                                const areaKey = `${cityName}-${idx}`;
-                                const displayName = `${cityName}${regionName ? `, ${regionName}` : ''}`;
+  return (
+    <section
+      className={cn('relative overflow-hidden', className)}
+      style={{
+        backgroundColor: themeColors.pageBackground,
+        fontFamily: themeFonts.body,
+      }}
+    >
+      <div className="container relative z-10 mx-auto max-w-4xl px-6 text-center lg:px-12">
+        <div className="mb-14 flex flex-col items-center justify-center space-y-4 md:mb-16">
+          <div
+            className="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium uppercase tracking-wider backdrop-blur-md"
+            style={{
+              backgroundColor: `${brandColor}08`,
+              color: brandColor,
+              border: `1px solid ${brandColor}15`,
+              fontFamily: themeFonts.body,
+            }}
+          >
+            <MapPin size={16} style={{ color: brandColor }} />
+            <span style={{ fontFamily: themeFonts.body }}>Coverage</span>
+          </div>
 
-                                return (
-                                    <Link
-                                        key={areaKey}
-                                        href={`/service/${serviceSlug}/service-areas/${citySlug}`}
-                                        className={cn(
-                                            "group relative border-b border-black/10 py-12 md:py-16 transition-all duration-300 cursor-pointer hover:shadow-lg no-underline",
-                                            idx % 2 === 0 ? "md:border-r md:pr-12 lg:pr-16" : "md:pl-12 lg:pl-16 font-light"
-                                        )}
-                                    >
-                                        <div className="flex flex-col gap-6">
-                                            {/* Indexing Number */}
-                                            <span
-                                                className="text-[10px] font-bold tracking-[0.2em] opacity-20 transition-all duration-500 group-hover:opacity-100"
-                                                style={{ color: brandColor }}
-                                            >
-                                                {(idx + 1).toString().padStart(2, '0')}
-                                            </span>
+          <h2
+            className="text-3xl font-medium tracking-tight md:text-8xl lg:text-8xl"
+            style={{
+              color: themeColors.mainText,
+              fontFamily: themeFonts.heading,
+            }}
+          >
+            {resolvedTitle}
+          </h2>
 
-                                            <div className="flex items-center justify-between gap-4">
-                                                <span
-                                                    className="flex-1 text-xl md:text-2xl lg:text-3xl font-extralight tracking-[0.05em] uppercase transition-all duration-500 group-hover:italic group-hover:translate-x-2"
-                                                    style={{
-                                                        color: themeColors.mainText,
-                                                        fontFamily: themeFonts.heading
-                                                    }}
-                                                >
-                                                    {displayName}
-                                                </span>
-                                                <ArrowRight
-                                                    size={20}
-                                                    className="shrink-0 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-700"
-                                                    style={{ color: brandColor }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
+          {hasShortDesc && (
+            <div
+              className="mx-auto max-w-lg text-sm font-light leading-relaxed opacity-75 md:text-base lg:text-lg"
+              style={{
+                color: themeColors.secondaryText,
+                fontFamily: themeFonts.body,
+              }}
+            >
+              {typeof shortDesc === 'string' ? (
+                shortDesc
+              ) : (
+                <TiptapRenderer content={shortDesc} className={TIPTAP_INHERIT} />
+              )}
             </div>
-        </section>
-    );
+          )}
+        </div>
+
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-4.5 md:gap-5">
+          {areas.map((area, idx) => {
+            const { areaName, areaSlug } = resolveAreaDisplay(area);
+            const linkPath = serviceSlug
+              ? `/service/${serviceSlug}/service-areas/${areaSlug}`
+              : `/service-area/${areaSlug}`;
+
+            return (
+              <Link
+                key={`${areaName}-${idx}`}
+                href={linkPath}
+                className="group relative inline-flex items-center gap-3 rounded-full px-6 py-3.5 no-underline transition-all duration-300 ease-out hover:scale-[1.03] active:scale-95"
+                style={{
+                  backgroundColor: `${themeColors.cardBackground}70`,
+                  color: themeColors.mainText,
+                  border: `1px solid ${themeColors.inactive}15`,
+                  boxShadow: '0 2px 8px -4px rgba(0,0,0,0.04)',
+                  fontFamily: themeFonts.body,
+                }}
+              >
+                <div
+                  className="absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  style={{ backgroundColor: `${brandColor}06` }}
+                />
+                <span
+                  className="text-[16px] font-bold tracking-tight opacity-40 transition-opacity duration-300 group-hover:opacity-100 md:text-[9px]"
+                  style={{ color: brandColor, fontFamily: themeFonts.body }}
+                >
+                  {String(idx + 1).padStart(2, '0')}
+                </span>
+                <span
+                  className="text-base font-medium tracking-wide transition-transform duration-300 group-hover:translate-x-[1px] md:text-lg lg:text-xl"
+                  style={{ fontFamily: themeFonts.heading }}
+                >
+                  {areaName}
+                </span>
+                <span
+                  className="text-sm font-light opacity-0 transition-all duration-300 -translate-x-1 group-hover:translate-x-0 group-hover:opacity-100"
+                  style={{ color: brandColor, fontFamily: themeFonts.body }}
+                >
+                  ↗
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
 };
+
+export default ServiceServingAreasSection;

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { Page } from '@/app/lib/types';
 import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
 import { getImageSrc, cn } from '@/app/lib/utils';
 import { OptimizedImage } from '@/app/components/ui/OptimizedImage';
 import { useThemeColors } from '@/app/hooks/useTheme';
+import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion';
+import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 
@@ -20,75 +21,15 @@ interface AboutSectionProps {
 }
 
 export const AboutSection: React.FC<AboutSectionProps> = ({ aboutSection, className }) => {
-  const themeColors = useThemeColors();
-  const sectionRef = useRef<HTMLElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
+  const { site } = useWebBuilder();
+  const theme = useThemeColors();
+  const reducedMotion = usePrefersReducedMotion();
+  
+  const rootRef = useRef<HTMLElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!aboutSection?.enabled) return;
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        imageContainerRef.current,
-        { clipPath: 'inset(0 100% 0 0)' },
-        {
-          clipPath: 'inset(0 0% 0 0)',
-          duration: 1.8,
-          ease: 'expo.inOut',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 80%',
-          },
-        }
-      );
-
-      gsap.fromTo(
-        imageRef.current,
-        { scale: 1.2, yPercent: 10 },
-        {
-          scale: 1,
-          yPercent: -10,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: true,
-          },
-        }
-      );
-
-      const children = textRef.current?.children;
-      if (children) {
-        gsap.fromTo(
-          children,
-          { y: 60, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            stagger: 0.2,
-            duration: 1.2,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: textRef.current,
-              start: 'top 85%',
-            },
-          }
-        );
-      }
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, [aboutSection]);
-
-  if (!aboutSection?.enabled) return null;
-
-  const brandColor = themeColors.primaryButton;
-  const features = aboutSection.features?.filter((f) => f?.label?.trim()) ?? [];
-
-  const imageUrl = aboutSection.image
+  const imageUrl = aboutSection?.image
     ? getImageSrc(
         typeof aboutSection.image === 'object' && aboutSection.image !== null
           ? aboutSection.image.url
@@ -96,103 +37,149 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ aboutSection, classN
       )
     : null;
 
-  return (
-    <section
-      ref={sectionRef}
-      className={cn('relative w-full overflow-hidden py-16 text-white md:py-24 lg:py-32', className)}
-      style={{
-        background: 'linear-gradient(180deg, #050508 0%, #0a0a12 40%, #06060c 100%)',
-      }}
-    >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[length:64px_64px] opacity-30" />
+  const features = aboutSection?.features?.filter((f) => f?.label?.trim()) ?? [];
 
-      <div className="container relative mx-auto px-8 md:px-16 lg:px-24">
-        <div className="flex flex-col items-center gap-16 lg:flex-row lg:gap-32">
-          <div ref={textRef} className="w-full space-y-10 lg:w-[46%]">
-            <div className="flex items-center gap-4">
-              <div className="h-[2px] w-12" style={{ backgroundColor: brandColor }} />
-              <span className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/45">Studio</span>
+  useEffect(() => {
+    if (!aboutSection?.enabled || !rootRef.current || reducedMotion) return;
+
+    const ctx = gsap.context(() => {
+      // Content Reveal
+      gsap.fromTo('.reveal-text', 
+        { y: 30, opacity: 0 },
+        { 
+          y: 0, 
+          opacity: 1, 
+          duration: 1, 
+          stagger: 0.2, 
+          ease: 'power3.out',
+          scrollTrigger: { trigger: rootRef.current, start: 'top 70%' }
+        }
+      );
+
+      // Image Parallax & Scale
+      if (imageContainerRef.current) {
+        gsap.fromTo(imageContainerRef.current,
+          { scale: 1.1, clipPath: 'inset(10% 10% 10% 10%)' },
+          { 
+            scale: 1, 
+            clipPath: 'inset(0% 0% 0% 0%)', 
+            duration: 1.5, 
+            ease: 'expo.out',
+            scrollTrigger: { trigger: imageContainerRef.current, start: 'top 80%' }
+          }
+        );
+      }
+
+      // Feature Line Drawing
+      gsap.fromTo('.feature-line',
+        { scaleX: 0 },
+        { 
+          scaleX: 1, 
+          duration: 1, 
+          stagger: 0.1, 
+          ease: 'power2.inOut',
+          scrollTrigger: { trigger: '.feature-grid', start: 'top 85%' }
+        }
+      );
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, [aboutSection?.enabled, reducedMotion]);
+
+  if (!aboutSection?.enabled) return null;
+
+  const alt = typeof aboutSection.image === 'object' && aboutSection.image !== null ? aboutSection.image?.altText || '' : '';
+
+  return (
+    <section 
+      ref={rootRef} 
+      className={cn('relative w-full py-8 px-4 overflow-hidden', className)}
+      style={{ backgroundColor: theme.pageBackground, color: theme.mainText }}
+    >
+      {/* Structural Grid Overlay (Background) */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" aria-hidden="true">
+        <div className="h-full w-full" style={{ backgroundImage: `linear-gradient(${theme.mainText} 1px, transparent 1px), linear-gradient(90deg, ${theme.mainText} 1px, transparent 1px)`, backgroundSize: '100px 100px' }} />
+      </div>
+
+      <div className="container relative mx-auto px-6 lg:px-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 items-start">
+          
+          {/* Text Content */}
+          <div className="lg:col-span-6 space-y-8">
+            <div className="reveal-text flex items-center gap-4">
+              <div className="h-[1px] w-12" style={{ backgroundColor: theme.primaryButton }} />
+              <span className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-60">
+                {site?.business?.name || 'About Us'}
+              </span>
             </div>
 
             {aboutSection.title && (
-              <h2 className="text-4xl font-light uppercase leading-[1.06] tracking-tight md:text-5xl lg:text-6xl">
+              <h2 className="reveal-text text-4xl md:text-6xl lg:text-7xl font-light leading-[1.1] tracking-tight" 
+                  style={{ fontFamily: site?.theme?.headingFont || 'inherit' }}>
                 <TiptapRenderer content={aboutSection.title} as="inline" />
               </h2>
             )}
 
             {aboutSection.description && (
-              <div className="max-w-lg text-base font-light leading-relaxed tracking-wide text-white/60 md:text-lg">
+              <div className="reveal-text text-lg md:text-xl font-light leading-relaxed opacity-80 max-w-xl">
                 <TiptapRenderer content={aboutSection.description} />
               </div>
             )}
 
-            {features.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {features.slice(0, 4).map((f, i) => (
-                  <motion.div
-                    key={`${f.label}-${i}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.3 }}
-                    transition={{ duration: 0.55, delay: i * 0.06 }}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl"
-                  >
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.3em]" style={{ color: brandColor }}>
-                      {f.label}
+            {/* Feature List (Timeline Redesign) */}
+            <div className="feature-grid pt-12 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+              {features.map((f, i) => (
+                <div key={i} className="group relative pt-6">
+                  <div className="feature-line absolute top-0 left-0 h-[1px] w-full origin-left opacity-20" style={{ backgroundColor: theme.mainText }} />
+                  <span className="text-[9px] font-bold uppercase tracking-widest mb-3 block" style={{ color: theme.primaryButton }}>
+                    {(i + 1).toString().padStart(2, '0')}
+                  </span>
+                  <h3 className="text-sm font-bold uppercase tracking-wider mb-2">{f.label}</h3>
+                  {f.description && (
+                    <div className="text-sm font-light opacity-60 leading-relaxed">
+                      <TiptapRenderer content={f.description} as="inline" />
                     </div>
-                    {f.description && (
-                      <div className="mt-2 text-xs font-light leading-relaxed text-white/55">
-                        <TiptapRenderer content={f.description} as="inline" />
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            )}
-
-            <div className="pt-4">
-              <motion.a
-                href="/about-us"
-                whileHover={{ x: 4 }}
-                className="group inline-flex items-center gap-6"
-              >
-                <span className="text-[10px] font-bold uppercase tracking-[0.35em]" style={{ color: brandColor }}>
-                  Full story
-                </span>
-                <div
-                  className="flex h-14 w-14 items-center justify-center rounded-full border transition-all duration-500 group-hover:scale-110"
-                  style={{ borderColor: brandColor, color: brandColor }}
-                >
-                  <svg className="h-4 w-4 transition-transform duration-500 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
+                  )}
                 </div>
-              </motion.a>
+              ))}
             </div>
           </div>
 
-          <div className="w-full lg:w-[54%]">
-            <div
-              ref={imageContainerRef}
-              className="group relative aspect-[4/5] overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] shadow-[0_40px_120px_rgba(0,0,0,0.55)] md:aspect-[16/11] lg:aspect-[4/3]"
-            >
+          {/* Image / Frame Section */}
+          <div className="lg:col-span-6 relative">
+            <div ref={imageContainerRef} className="relative aspect-[4/5] w-full overflow-hidden rounded-sm shadow-2xl">
               {imageUrl ? (
                 <OptimizedImage
-                  ref={imageRef}
                   src={imageUrl}
-                  alt={typeof aboutSection.image === 'object' ? aboutSection.image?.altText || '' : ''}
+                  alt={alt}
                   fill
-                  sizes="(max-width: 1024px) 100vw, 54vw"
-                  className="object-cover transition-transform duration-1000 group-hover:scale-[1.03]"
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/[0.06] to-transparent">
-                  <span className="text-xs uppercase tracking-[0.4em] text-white/25">Visual narrative</span>
-                </div>
+                <div className="w-full h-full opacity-10" style={{ backgroundColor: theme.mainText }} />
               )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              
+              {/* Decorative Frame Overlays */}
+              <div className="absolute inset-4 border border-white/20 pointer-events-none" />
+            </div>
+
+            {/* Architectural Label */}
+            <div className="absolute -bottom-6 -right-2 md:right-12 bg-white p-6 shadow-xl hidden md:block" style={{ backgroundColor: theme.pageBackground }}>
+              <div className="flex items-center gap-8">
+                <div className="text-left">
+                  <p className="text-[8px] uppercase tracking-[0.3em] opacity-40 mb-1">Status</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest">Active Phase</p>
+                </div>
+                <div className="h-8 w-[1px] opacity-10" style={{ backgroundColor: theme.mainText }} />
+                <div className="text-left">
+                  <p className="text-[8px] uppercase tracking-[0.3em] opacity-40 mb-1">Project Code</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest">EST. {new Date().getFullYear()}</p>
+                </div>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </section>

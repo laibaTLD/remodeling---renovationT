@@ -5,13 +5,12 @@ import { ErrorBoundary } from '@/app/components/ui/ErrorBoundary'
 import { ThemeFontWrapper } from './components/ui/ThemeFontWrapper'
 import { LanguageProvider } from '@/app/i18n/LanguageProvider'
 import { LenisProvider } from '@/app/components/cinematic/LenisProvider'
+import { HeroIntroProvider } from '@/app/providers/HeroIntroProvider'
 
 export const metadata: Metadata = {
   title: 'Web Builder Site',
   description: 'Generated site using Web Builder',
 }
-
-import Preloader from './components/ui/Preloader'
 
 export default function RootLayout({
   children,
@@ -25,12 +24,13 @@ export default function RootLayout({
           <WebBuilderProvider>
             <LanguageProvider>
               <LenisProvider>
-                <ThemeFontWrapper>
-                  <main className="min-h-screen">
-                    <Preloader />
-                    {children}
-                  </main>
-                </ThemeFontWrapper>
+                <HeroIntroProvider>
+                  <ThemeFontWrapper>
+                    <main className="min-h-screen">
+                      {children}
+                    </main>
+                  </ThemeFontWrapper>
+                </HeroIntroProvider>
               </LenisProvider>
             </LanguageProvider>
           </WebBuilderProvider>

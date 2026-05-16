@@ -5,9 +5,8 @@ import { Page, BusinessHours } from '@/app/lib/types';
 import { useThemeColors, useThemeFonts } from '@/app/hooks/useTheme';
 import { useWebBuilder } from '@/app/providers/WebBuilderProvider';
 import { cn } from '@/app/lib/utils';
-import { ArrowRight } from 'lucide-react';
+import { ArrowUpRight, Clock3, MapPinned } from 'lucide-react';
 import { ContactSideForm } from '@/app/components/ui/ContactSideForm';
-import { TiptapRenderer } from '@/app/components/ui/TiptapRenderer';
 
 const DAY_LABELS: Record<string, string> = {
   monday: 'Mon',
@@ -24,8 +23,12 @@ interface ContactSectionProps {
   className?: string;
 }
 
-export const ContactSection: React.FC<ContactSectionProps> = ({ contactSection, className }) => {
+export const ContactSection: React.FC<ContactSectionProps> = ({
+  contactSection,
+  className
+}) => {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+
   const themeColors = useThemeColors();
   const themeFonts = useThemeFonts();
   const { site } = useWebBuilder();
@@ -35,168 +38,339 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ contactSection, 
   const business = site?.business;
   const address = business?.address;
   const businessHours = business?.businessHours;
-  const safeBusinessHours = Array.isArray(businessHours?.hours) ? businessHours.hours : [];
-  const hasValidCoordinates =
-    typeof site?.business?.coordinates?.latitude === 'number' &&
-    typeof site?.business?.coordinates?.longitude === 'number';
-  
+
   const formatTime = (time: string) => {
     if (!time) return '';
+
     if (businessHours?.displayFormat === '12h') {
       const [hours, minutes] = time.split(':');
-      const hour = parseInt(hours, 10);
-      if (Number.isNaN(hour) || !minutes) return time;
+      const hour = parseInt(hours);
       const ampm = hour >= 12 ? 'PM' : 'AM';
       const displayHour = hour % 12 || 12;
+
       return `${displayHour}:${minutes} ${ampm}`;
     }
+
     return time;
   };
 
   const formatDayHours = (dayHours: BusinessHours) => {
     if (!dayHours.isOpen) return 'Closed';
-    if (dayHours.is24Hours) return '24h';
-    if (Array.isArray(dayHours.timeRanges) && dayHours.timeRanges.length > 0) {
+    if (dayHours.is24Hours) return '24 Hours';
+
+    if (dayHours.timeRanges && dayHours.timeRanges.length > 0) {
       return dayHours.timeRanges
-      .filter((range) => range?.openTime && range?.closeTime)
-      .map(range => 
-        `${formatTime(range.openTime)} - ${formatTime(range.closeTime)}`
-      ).join(', ');
+        .map(
+          (range) =>
+            `${formatTime(range.openTime)} - ${formatTime(range.closeTime)}`
+        )
+        .join(', ');
     }
-    return 'Hours unavailable';
+
+    return '';
   };
 
-  const showForm = Boolean(contactSection.showForm);
-  const showMap = Boolean(contactSection.showMap);
-  const showContactInfo = Boolean(contactSection.showContactInfo);
-  const showInfoAndOrMap = showContactInfo || showMap;
-  const infoMapGridClass = showContactInfo && showMap ? 'lg:grid-cols-2' : 'lg:grid-cols-1';
-
   return (
-    <section 
-      className={cn('py-24 md:py-32 lg:py-40 flex flex-col gap-32 lg:gap-48', className)} 
-      style={{ backgroundColor: themeColors.pageBackground, fontFamily: themeFonts.body }}
-    >
-      
-      {/* PART 1: "ANY QUESTIONS?" CALL TO ACTION */}
-      {showForm && (
-        <div className="container mx-auto px-6 text-center flex flex-col items-center">
-          <div className="max-w-4xl space-y-4 mb-20 text-center">
-            {contactSection.title && (
-              <h2 
-                className="text-3xl md:text-5xl lg:text-7xl font-extralight tracking-[0.15em] uppercase leading-[1.1]"
-                style={{ fontFamily: themeFonts.heading, color: themeColors.mainText }}
-              >
-                <TiptapRenderer content={contactSection.title} />
-              </h2>
-            )}
-            {contactSection.description && (
-              <div 
-                className="mx-auto max-w-3xl text-sm md:text-base lg:text-lg font-normal tracking-[0.08em] uppercase leading-relaxed opacity-85"
-                style={{ 
-                    fontFamily: themeFonts.heading, 
-                    color: themeColors.primaryButton 
-                }}
-              >
-                <TiptapRenderer content={contactSection.description} />
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="group relative flex items-center justify-between px-10 py-6 w-full max-w-[320px] transition-all duration-500 overflow-hidden text-left"
-            style={{ backgroundColor: themeColors.primaryButton, color: '#FFFFFF' }}
-          >
-            <span className="text-[11px] font-bold tracking-[0.4em] uppercase z-10">Form</span>
-            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform z-10" />
-            <div className="absolute inset-0 bg-black/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-          </button>
-        </div>
+    <section
+      className={cn(
+        'relative overflow-hidden py-6',
+        className
       )}
+      style={{
+        backgroundColor: themeColors.pageBackground,
+        fontFamily: themeFonts.body
+      }}
+    >
+      {/* Background Glow */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full blur-[140px] opacity-10 pointer-events-none"
+        style={{
+          backgroundColor: themeColors.primaryButton || '#E31E24'
+        }}
+      />
 
-      {/* Slide-out Form Component */}
-      {showForm && <ContactSideForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />}
+      <div className="container mx-auto relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-14 lg:gap-20 items-center">
+          
+          {/* LEFT CONTENT */}
+          <div className="space-y-14">
+            {/* Heading */}
+            <div className="space-y-8">
+              <span
+                className="inline-block text-[11px] uppercase tracking-[0.45em] font-semibold"
+                style={{ color: themeColors.secondaryText, fontFamily: themeFonts.body }}
+              >
+                Contact Studio
+              </span>
 
-      {/* PART 2: "WHERE TO FIND US" MAP SECTION */}
-      {showInfoAndOrMap && (
-      <div className={`container mx-auto px-6 md:px-12 grid grid-cols-1 ${infoMapGridClass} gap-16 lg:gap-24 items-start`}>
-        
-        {/* Left: Info */}
-        {showContactInfo && (
-        <div className="space-y-16 w-full">
-          <h2 
-            className="text-3xl md:text-5xl font-extralight tracking-[0.2em] uppercase leading-tight"
-            style={{ fontFamily: themeFonts.heading, color: themeColors.mainText }}
-          >
-            Where to<br />find us
-          </h2>
+              <div className="space-y-4">
+                <h2
+                  className="text-4xl md:text-6xl lg:text-7xl font-extralight uppercase leading-[0.95]"
+                  style={{
+                    color: themeColors.mainText,
+                    fontFamily: themeFonts.heading
+                  }}
+                >
+                  Let’s Build
+                  <br />
+                  Something
+                  <span
+                    className="italic ml-4"
+                    style={{
+                      color:
+                        themeColors.primaryButton || '#E31E24'
+                    }}
+                  >
+                    Timeless
+                  </span>
+                </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
-            {/* Address */}
-            <div className="space-y-6">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase tracking-[0.2em] mb-4 block font-bold opacity-30">Head Office</span>
-                <p className="text-sm md:text-base font-light tracking-wide max-w-sm opacity-80 leading-relaxed uppercase">
-                  {address?.street}<br />
-                  {address?.city}{address?.city && address?.zipCode ? ', ' : ''}{address?.zipCode}
+                <p
+                  className="max-w-xl text-sm md:text-base leading-relaxed font-light"
+                  style={{ color: themeColors.secondaryText, fontFamily: themeFonts.body }}
+                >
+                  We create refined architectural and renovation
+                  experiences with a focus on craftsmanship,
+                  modern aesthetics, and thoughtful design details.
                 </p>
               </div>
+            </div>
 
-              {address?.street && address?.city && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${address.street} ${address.city}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative flex items-center justify-between px-8 py-4 w-full max-w-[220px] transition-all duration-500 overflow-hidden mt-8"
-                  style={{ backgroundColor: themeColors.primaryButton, color: '#FFFFFF' }}
+            {/* Contact Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Address Card */}
+              <div
+                className="relative p-8 border backdrop-blur-xl transition-all duration-500 hover:-translate-y-1"
+                style={{
+                  backgroundColor: `${themeColors.cardBackground}90`,
+                  borderColor: `${themeColors.inactive}30`
+                }}
+              >
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <MapPinned
+                      size={18}
+                      style={{
+                        color:
+                          themeColors.primaryButton || '#E31E24'
+                      }}
+                    />
+
+                    <span
+                      className="text-[11px] uppercase tracking-[0.35em] font-semibold"
+                      style={{ color: themeColors.secondaryText, fontFamily: themeFonts.body }}
+                    >
+                      Office
+                    </span>
+                  </div>
+
+                  <div
+                    className="space-y-1 text-sm md:text-base uppercase leading-relaxed"
+                    style={{ color: themeColors.mainText, fontFamily: themeFonts.heading }}
+                  >
+                    <p>{address?.street}</p>
+
+                    <p>
+                      {address?.city}
+                      {address?.zipCode
+                        ? `, ${address?.zipCode}`
+                        : ''}
+                    </p>
+                  </div>
+
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      `${address?.street || ''} ${
+                        address?.city || ''
+                      }`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.35em] font-semibold transition-all"
+                    style={{
+                      color:
+                        themeColors.primaryButton || '#E31E24',
+                      fontFamily: themeFonts.body
+                    }}
+                  >
+                    View Location
+                    <ArrowUpRight
+                      size={14}
+                      className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    />
+                  </a>
+                </div>
+              </div>
+
+              {/* Hours Card */}
+              {businessHours?.isEnabled && (
+                <div
+                  className="relative p-8 border backdrop-blur-xl transition-all duration-500 hover:-translate-y-1"
+                  style={{
+                    backgroundColor: `${themeColors.cardBackground}90`,
+                    borderColor: `${themeColors.inactive}30`
+                  }}
                 >
-                  <span className="text-[10px] font-bold tracking-[0.3em] uppercase z-10">View Map</span>
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform z-10" />
-                  <div className="absolute inset-0 bg-black/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                </a>
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <Clock3
+                        size={18}
+                        style={{
+                          color:
+                            themeColors.primaryButton || '#E31E24'
+                        }}
+                      />
+
+                      <span
+                        className="text-[11px] uppercase tracking-[0.35em] font-semibold"
+                        style={{
+                          color: themeColors.secondaryText,
+                          fontFamily: themeFonts.body
+                        }}
+                      >
+                        Working Hours
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {businessHours.hours.map((day) => (
+                        <div
+                          key={day.day}
+                          className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em]"
+                        >
+                          <span
+                            style={{
+                              color: themeColors.secondaryText,
+                              fontFamily: themeFonts.body
+                            }}
+                          >
+                            {DAY_LABELS[day.day]}
+                          </span>
+
+                          <span
+                            className="text-right"
+                            style={{
+                              color: themeColors.mainText,
+                              fontFamily: themeFonts.body
+                            }}
+                          >
+                            {formatDayHours(day)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Business Hours */}
-            {businessHours?.isEnabled && safeBusinessHours.length > 0 && (
-              <div className="space-y-6">
-                <span className="text-[10px] uppercase tracking-[0.2em] mb-4 block font-bold opacity-30">Business Hours</span>
-                <div className="space-y-2">
-                  {safeBusinessHours.filter(Boolean).map((day) => (
-                    <div key={day.day} className="flex justify-between items-baseline gap-4 text-[11px] uppercase tracking-widest opacity-80 font-light">
-                      <span className="font-semibold opacity-60">{DAY_LABELS[day.day] || day.day}</span>
-                      <span className="text-right">{formatDayHours(day)}</span>
+            {/* CTA */}
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="group relative inline-flex items-center gap-5 overflow-hidden px-10 py-5 transition-all duration-500"
+              style={{
+                backgroundColor:
+                  themeColors.primaryButton || '#E31E24',
+                color: '#FFFFFF',
+                fontFamily: themeFonts.body
+              }}
+            >
+              <span className="relative z-10 text-[11px] uppercase tracking-[0.4em] font-semibold">
+                Start Your Project
+              </span>
+
+              <ArrowUpRight
+                size={18}
+                className="relative z-10 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
+              />
+
+              <div className="absolute inset-0 bg-black/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+            </button>
+          </div>
+
+          {/* RIGHT MAP */}
+          <div className="relative">
+            <div
+              className="relative overflow-hidden border backdrop-blur-xl"
+              style={{
+                backgroundColor: `${themeColors.cardBackground}70`,
+                borderColor: `${themeColors.inactive}30`
+              }}
+            >
+              {site?.business?.coordinates ? (
+                <div className="relative aspect-[4/5] lg:aspect-[4/4.6] overflow-hidden">
+                  <iframe
+                    title="Office Location"
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    loading="lazy"
+                    className="grayscale contrast-125 scale-[1.02] hover:scale-105 hover:grayscale-0 transition-all duration-1000"
+                    src={`https://maps.google.com/maps?q=${site.business.coordinates.latitude},${site.business.coordinates.longitude}&z=14&output=embed`}
+                  />
+
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+                  {/* Floating Label */}
+                  <div
+                    className="absolute bottom-6 left-6 right-6 p-5 backdrop-blur-xl border"
+                    style={{
+                      backgroundColor: 'rgba(0,0,0,0.35)',
+                      borderColor: 'rgba(255,255,255,0.08)'
+                    }}
+                  >
+                    <div className="space-y-2">
+                      <span
+                        className="text-[10px] uppercase tracking-[0.35em] text-white/60"
+                        style={{ fontFamily: themeFonts.body }}
+                      >
+                        Studio Location
+                      </span>
+
+                      <p
+                        className="text-sm md:text-base text-white uppercase leading-relaxed"
+                        style={{ fontFamily: themeFonts.heading }}
+                      >
+                        {address?.street}
+                        <br />
+                        {address?.city}
+                        {address?.zipCode
+                          ? `, ${address?.zipCode}`
+                          : ''}
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div
+                  className="aspect-[4/5] flex items-center justify-center"
+                  style={{
+                    backgroundColor:
+                      themeColors.cardBackground
+                  }}
+                >
+                  <span
+                    className="text-[11px] uppercase tracking-[0.4em]"
+                    style={{
+                      color: themeColors.secondaryText,
+                      fontFamily: themeFonts.body
+                    }}
+                  >
+                    Map Preview Pending
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        )}
-
-        {/* Right: Architectural Map Overlay */}
-        {showMap && hasValidCoordinates && (
-          <div className="relative aspect-[16/10] md:aspect-video lg:aspect-[4/3] w-full overflow-hidden shadow-2xl lg:mt-12">
-              <div className="w-full h-full grayscale-[0.9] contrast-[1.1] brightness-[1.1] scale-100 hover:grayscale-0 transition-all duration-1000">
-                <iframe
-                  title="Office Location"
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  style={{ border: 0, filter: 'grayscale(1) contrast(1.2) opacity(0.8)' }}
-                  src={`https://maps.google.com/maps?q=${site.business.coordinates.latitude},${site.business.coordinates.longitude}&z=15&output=embed`}
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
-            {/* Subtle architectural frame */}
-            <div className="absolute inset-0 border-[20px] border-white/5 pointer-events-none" />
-          </div>
-        )}
       </div>
-      )}
+
+      <ContactSideForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+      />
     </section>
   );
 };

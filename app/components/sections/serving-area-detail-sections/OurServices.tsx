@@ -60,12 +60,20 @@ export const OurServices: React.FC<OurServicesProps> = ({ services, className })
               </h2>
             )}
           </div>
-          {(services.subtitle || services.description) && (
+          {services.subtitle && (
             <div 
               className="lg:max-w-sm text-lg opacity-70 leading-relaxed"
               style={{ color: themeColors.lightSecondaryText }}
             >
-              <TiptapRenderer content={services.subtitle || services.description} as="inline" />
+              <TiptapRenderer content={services.subtitle} as="inline" />
+            </div>
+          )}
+          {services.description && (
+            <div 
+              className="lg:max-w-sm text-lg opacity-70 leading-relaxed"
+              style={{ color: themeColors.lightSecondaryText }}
+            >
+              <TiptapRenderer content={services.description} as="inline" />
             </div>
           )}
         </div>

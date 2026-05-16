@@ -114,7 +114,7 @@ export default function ServicesPage() {
       <Header />
 
       <main>
-        <HeroSection hero={displayPage.hero} />
+        <HeroSection hero={displayPage.hero} projectsSection={displayPage.projectsSection} />
         <ServicesSection servicesSection={displayPage.servicesSection} />
       </main>
 
